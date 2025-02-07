@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "grumpy"
+description = "A small Python library created to help developers protect their applications from Server Side Request Forgery (SSRF) attacks."
+authors = [
+    { name = "Abubakar Abid", email = "abubakar@hf.co" }
+]
+readme = "README.md"
+requires-python = ">3.9"
+dependencies = [
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/gradio-app/grumpy"
+repository = "https://github.com/gradio-app/grumpy"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff==0.9.3"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["grumpy"]
+
+[tool.hatch.version]
+path = "grumpy/version.txt"
+pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+# Same as Black.
+line-length = 88
+indent-width = 4
+
+# Assume Python 3.8
+target-version = "py38"
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)
+select = ["E", "F", "I"]
+# Ignore line length violations
+ignore = ["E501"]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+# Use single quotes for strings.
+quote-style = "double"
+
+# Indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
