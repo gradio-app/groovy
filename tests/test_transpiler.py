@@ -118,9 +118,10 @@ def test_boolean_operations():
     def logical_ops(a, b):
         return a and b or not a
 
-    with pytest.raises(TranspilerError):
-        # Should raise error due to unsupported 'not' operator
+    with pytest.raises(TranspilerError) as e:
         transpile(logical_ops)
+
+    assert "Line 2" in str(e.value)
 
 
 def test_dict_operations():
