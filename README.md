@@ -39,6 +39,9 @@ print(js_code)
 
 If Grompy encounters unsupported syntax, it will **complain loudly** (throw a `TranspilationError` with a line number so you know what to fix.
 
+```python
+grompy.transpiler.TranspilerError: Line 2: Unsupported or ambiguous syntax encountered: UnaryOp(op=Not(), operand=Name(id='a', ctx=Load()))
+```
 
 ### 📜 License
 Grompy is open-source under the [MIT License](https://github.com/abidlabs/grompy/blob/main/LICENSE).
