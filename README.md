@@ -1,5 +1,4 @@
 <p align="center">
-    <a href="https://github.com/abidlabs/grompy/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/abidlabs/grompy.svg?color=blue"></a>
     <a href="https://pypi.org/project/grompy/"><img alt="PyPI" src="https://img.shields.io/pypi/v/grompy"></a>
     <img alt="Python version" src="https://img.shields.io/badge/python-3.10+-important">
     <a href="https://github.com/abidlabs/grompy/actions/workflows/format.yml"><img alt="Format" src="https://github.com/abidlabs/grompy/actions/workflows/format.yml/badge.svg"></a>
