@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "grumpy"
+name = "grompy"
 description = "A small Python library created to help developers protect their applications from Server Side Request Forgery (SSRF) attacks."
 authors = [
     { name = "Abubakar Abid", email = "abubakar@hf.co" }
@@ -20,8 +20,8 @@ classifiers = [
 dynamic = ["version"]
 
 [project.urls]
-homepage = "https://github.com/gradio-app/grumpy"
-repository = "https://github.com/gradio-app/grumpy"
+homepage = "https://github.com/gradio-app/grompy"
+repository = "https://github.com/gradio-app/grompy"
 
 [project.optional-dependencies]
 dev = [
@@ -30,10 +30,10 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["grumpy"]
+packages = ["grompy"]
 
 [tool.hatch.version]
-path = "grumpy/version.txt"
+path = "grompy/version.txt"
 pattern = "^(?P<version>[0-9]+\\.[0-9]+\\.[0-9]+)$"
 
 [tool.ruff]

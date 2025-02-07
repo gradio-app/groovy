@@ -1,17 +1,17 @@
 <p align="center">
-    <a href="https://github.com/abidlabs/grumpy/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/abidlabs/grumpy.svg?color=blue"></a>
-    <a href="https://pypi.org/project/grumpy/"><img alt="PyPI" src="https://img.shields.io/pypi/v/grumpy"></a>
+    <a href="https://github.com/abidlabs/grompy/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/abidlabs/grompy.svg?color=blue"></a>
+    <a href="https://pypi.org/project/grompy/"><img alt="PyPI" src="https://img.shields.io/pypi/v/grompy"></a>
     <img alt="Python version" src="https://img.shields.io/badge/python-3.10+-important">
-    <a href="https://github.com/abidlabs/grumpy/actions/workflows/format.yml"><img alt="Format" src="https://github.com/abidlabs/grumpy/actions/workflows/format.yml/badge.svg"></a>
-    <a href="https://github.com/abidlabs/grumpy/actions/workflows/test.yml"><img alt="Test" src="https://github.com/abidlabs/grumpy/actions/workflows/test.yml/badge.svg"></a>
+    <a href="https://github.com/abidlabs/grompy/actions/workflows/format.yml"><img alt="Format" src="https://github.com/abidlabs/grompy/actions/workflows/format.yml/badge.svg"></a>
+    <a href="https://github.com/abidlabs/grompy/actions/workflows/test.yml"><img alt="Test" src="https://github.com/abidlabs/grompy/actions/workflows/test.yml/badge.svg"></a>
 </p>
 
 
-<h1 align="center">🕺 grumpy</h1>
+<h1 align="center">🕺 grompy</h1>
 
-Hello! This is `grumpy`, a Python library that makes it easy to build, debug, and share workflows (_flows_), e.g. autonomous applications that perform actions using your browser or desktop.
+Hello! This is `grompy`, a Python library that makes it easy to build, debug, and share workflows (_flows_), e.g. autonomous applications that perform actions using your browser or desktop.
 
-✨ **Build** flows with a simple high-level `Flow` class that can wrap any kind of application. Since `grumpy` comes "batteries-included", you can write your first Flow to control a browser in just a single line.
+✨ **Build** flows with a simple high-level `Flow` class that can wrap any kind of application. Since `grompy` comes "batteries-included", you can write your first Flow to control a browser in just a single line.
 
 🔎 **Debug** flows with an intuitive Gradio user interface, that exposes agent thought while it runs and allows users to "step-in" and intervene at any point.
 
@@ -26,7 +26,7 @@ Hello! This is `grumpy`, a Python library that makes it easy to build, debug, an
 Assuming you have Python 3.10 or higher already installed, run in your terminal:
 
 ```bash
-pip install "grumpy[full]"
+pip install "grompy[full]"
 ```
 
 ## Key Features
@@ -36,17 +36,17 @@ pip install "grumpy[full]"
 Run browser automations with a single terminal command. No need for complex setup or boilerplate code:
 
 ```bash
-grumpy flow "Use Wikipedia to tell me the birth date of George Washington. Return the final answer in this format: MM-DD-YYYY."
+grompy flow "Use Wikipedia to tell me the birth date of George Washington. Return the final answer in this format: MM-DD-YYYY."
 ```
 
-Note: by default, grumpy uses a web-browsing agent built using the excellent [`smolagents` library](https://github.com/huggingface/smolagents). The web-browsing agent works best when provided detailed, step-by-step instructions.
+Note: by default, grompy uses a web-browsing agent built using the excellent [`smolagents` library](https://github.com/huggingface/smolagents). The web-browsing agent works best when provided detailed, step-by-step instructions.
 
 ### 2. Customize Flows
 
 Create interactive automation apps using the `Flow` class. You can define input parameters that users can customize before running the flow:
 
 ```python
-from grumpy import Flow
+from grompy import Flow
 import gradio as gr
 
 flow = Flow(
@@ -65,7 +65,7 @@ flow.launch()
 The `Flow` class can also be run programmatically so that it can be used as part of larger programs. Here's an example:
 
 ```python
-from grumpy import Flow
+from grompy import Flow
 import csv
 
 flow = Flow(task="Find the next upcoming meetup in {} related to {}")
@@ -91,7 +91,7 @@ with open("board_game_events.csv", "w", newline="") as f:
 Share your automation workflows with others by publishing to Hugging Face Spaces. Just navigate to your project folder and run in the terminal:
 
 ```bash
-grumpy publish
+grompy publish
 ```
 
 This will create a public (you can change visibility to private) Hugging Face Space where others can access and use your automation.
@@ -101,13 +101,13 @@ This will create a public (you can change visibility to private) Hugging Face Sp
 Take advantage of existing workflows created by the community. Run any published workflow locally from your terminal, e.g.:
 
 ```bash
-grumpy flow https://huggingface.co/spaces/abidlabs/Activity_Finder
+grompy flow https://huggingface.co/spaces/abidlabs/Activity_Finder
 ```
 
 The Python equivalent to load a Flow from Spaces is also straightforward:
 
 ```python
-import grumpy as gv
+import grompy as gv
 
 flow = gv.Flow.from_space("https://huggingface.co/spaces/abidlabs/Activity_Finder")
 
