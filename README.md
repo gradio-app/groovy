@@ -40,11 +40,13 @@ print(js_code)
 If Grompy encounters unsupported syntax, it will **complain loudly** (throw a `TranspilationError` with a line number so you know what to fix.
 
 ```python
-grompy.transpiler.TranspilerError: Line 2: Unsupported or ambiguous syntax encountered: UnaryOp(op=Not(), operand=Name(id='a', ctx=Load()))
+grompy.transpiler.TranspilerError: 
+
+Line 2: Unsupported or ambiguous syntax encountered: UnaryOp(op=Not(), operand=Name(id='a', ctx=Load()))
 ```
 
 ### 📜 License
 Grompy is open-source under the [MIT License](https://github.com/abidlabs/grompy/blob/main/LICENSE).
 
 ---
-Contributions are welcome! Feel free to open an issue or PR if you have suggestions.
+Contributions to increase coverage of the Python library that Grompy can transpile are welcome! We welcome AI-generated PRs if the rationale is clear to follow, PRs are not too large in scope, and tests are included.
