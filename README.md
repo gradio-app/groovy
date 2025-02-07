@@ -10,8 +10,6 @@
 <h1 align="center"> 🐻 Grompy</h1>
 
 
-## 🐻 Grompy
-
 Grompy is a Python-to-JavaScript transpiler designed specifically for use in the [Gradio](https://gradio.app) library. Instead of aiming for full coverage of Python features, Grompy prioritizes **clear error reporting** for unsupported code, making it easier for developers to modify their functions accordingly.
 
 ### 🚀 Features
@@ -29,16 +27,19 @@ pip install grompy
 ```python
 from grompy import transpile
 
-def my_function(x):
-    return x + 1
+def sum(x, y):
+    return x + y
 
-js_code = transpile(my_function)
-print(js_code)  # Outputs equivalent JavaScript code
+js_code = transpile(sum)
+print(js_code)
+
+# function sum(x, y) {
+#    return x + y;
+#}
 ```
-If Grompy encounters unsupported syntax, it will **complain loudly** so you know what to fix.
 
-### ❗ Why "Grompy"?
-Like a grumpy bear 🐻, Grompy isn’t here to cover everything—just to **clearly tell you what’s wrong** when something can't be transpiled.
+If Grompy encounters unsupported syntax, it will **complain loudly** (throw a `TranspilationException` with a line number so you know what to fix.
+
 
 ### 📜 License
 Grompy is open-source under the [MIT License](https://github.com/abidlabs/grompy/blob/main/LICENSE).
