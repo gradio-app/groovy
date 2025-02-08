@@ -9,7 +9,7 @@
 <h1 align="center"> 🐻 Grompy</h1>
 
 
-Grompy is a Python-to-JavaScript transpiler meaning that it converts Python functions to their JavaScript equivlaents. It is designed for use in the [Gradio](https://gradio.app) library, so that developers could write functions in Python and have them executed client-side in JavaScript for improved performance. Instead of aiming for full coverage of Python features, Grompy prioritizes **clear error reporting** for unsupported code, making it easier for developers to modify their functions accordingly.
+Grompy is a Python-to-JavaScript transpiler meaning that it converts Python functions to their JavaScript equivlaents. It is designed for use in the [Gradio](https://gradio.app) library, so that developers can write functions in Python and have them run as fast as client-side JavaScript ⚡. Instead of aiming for full coverage of Python features, Grompy prioritizes **clear error reporting** for unsupported code, making it easier for developers to modify their functions accordingly.
 
 ### 🚀 Features
 - Converts simple Python functions into JavaScript equivalents.
