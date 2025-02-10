@@ -32,6 +32,7 @@ def sum(x, y):
 js_code = transpile(sum)
 print(js_code)
 ```
+produces:
 
 ```
 function sum(x, y) {
@@ -52,6 +53,8 @@ def example_function(x, y):
 
 transpile(example_function)
 ```
+
+raises:
 
 ```
 TranspilerError: 2 issues found:
