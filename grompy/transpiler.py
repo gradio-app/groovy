@@ -9,20 +9,44 @@ from collections.abc import Callable
 class TranspilerError(Exception):
     """Exception raised when transpilation fails or encounters ambiguous syntax."""
 
-    def __init__(self, message: str, node: ast.AST | None = None):
-        self.node = node
-        if node and hasattr(node, "lineno"):
-            message = f"Line {node.lineno}: {message}"  # type: ignore
-        super().__init__(message)
+    def __init__(self, issues: list[tuple[int, str, str]] | None = None, message: str | None = None):
+        self.issues = issues or []
+        if message:
+            super().__init__(message)
+        else:
+            issue_count = len(self.issues)
+            issues_text = f"{issue_count} issue{'s' if issue_count != 1 else ''} found:\n\n"
+            for line_no, message, code in self.issues:
+                issues_text += f"* Line {line_no}: {message}\n>> {code}\n"
+            super().__init__(issues_text)
 
 
 class PythonToJSVisitor(ast.NodeVisitor):
     def __init__(self):
         self.js_lines = []  # Accumulate lines of JavaScript code.
         self.indent_level = 0  # Track current indent level for readability.
-        self.declared_vars = (
-            set()
-        )  # Track declared variables to avoid redeclaring with 'let'
+        self.declared_vars = set()  # Track declared variables
+        self.issues: list[tuple[int, str, str]] = []  # Track transpilation issues
+        self.source_lines: list[str] = []  # Store source code lines
+
+    def add_issue(self, node: ast.AST, message: str) -> None:
+        """Add a transpilation issue with source code context."""
+        if hasattr(node, 'lineno'):
+            line_no = node.lineno
+            line_text = self.source_lines[line_no - 1].strip()
+            self.issues.append((line_no, message, line_text))
+
+    def visit(self, node):
+        try:
+            return super().visit(node)
+        except TranspilerError as e:
+            if e.issues:
+                self.issues.extend(e.issues)
+            return ""  # Return empty string for failed conversions
+
+    def generic_visit(self, node):
+        self.add_issue(node, f"Unsupported syntax: {type(node).__name__}")
+        return ""
 
     def indent(self) -> str:
         return "    " * self.indent_level
@@ -172,7 +196,8 @@ class PythonToJSVisitor(ast.NodeVisitor):
                 args = [self.visit(arg) for arg in node.args]
                 return self.visit_range(args)
             # All other direct function calls are not supported
-            raise TranspilerError("Only method calls can be transpiled to JavaScript")
+            self.add_issue(node, f"Unsupported function \"{node.func.id}()\"")
+            return ""
         
         # For method calls (like obj.method())
         func = self.visit(node.func)
@@ -255,12 +280,6 @@ class PythonToJSVisitor(ast.NodeVisitor):
             pairs.append(f"{key_js}: {value_js}")
         return f"{{{', '.join(pairs)}}}"
 
-    # === Fallback for Unsupported Nodes ===
-    def generic_visit(self, node):
-        raise TranspilerError(
-            f"Unsupported or ambiguous syntax encountered: {ast.dump(node)}", node
-        )
-
 
 def transpile(fn: Callable) -> str:
     """
@@ -270,15 +289,13 @@ def transpile(fn: Callable) -> str:
         source = inspect.getsource(fn)
         source = textwrap.dedent(source)
     except Exception as e:
-        raise TranspilerError(
-            "Could not retrieve source code from the function."
-        ) from e
+        raise TranspilerError(message="Could not retrieve source code from the function.") from e
 
     # Parse the source code into an AST.
     try:
         tree = ast.parse(source)
     except SyntaxError as e:
-        raise TranspilerError("Could not parse function source.") from e
+        raise TranspilerError(message="Could not parse function source.") from e
 
     # Find the first function definition in the AST.
     func_node = None
@@ -288,18 +305,23 @@ def transpile(fn: Callable) -> str:
             break
 
     if func_node is None:
-        raise TranspilerError("No function definition found in the provided source.")
+        raise TranspilerError(message="No function definition found in the provided source.")
 
     # Visit the function node to generate JavaScript code.
     visitor = PythonToJSVisitor()
+    visitor.source_lines = source.splitlines()
     visitor.visit(func_node)
+
+    # If there were any issues, raise them all at once
+    if visitor.issues:
+        raise TranspilerError(issues=visitor.issues)
+
     return "\n".join(visitor.js_lines)
 
 
 # === Example Usage ===
 def example_function(x, y):
     z = x + y
-    print(z)
     if z > 10:
         return z
     else:
