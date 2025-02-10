@@ -54,7 +54,7 @@ def test_for_loop_range():
 
     expected = """function sum_range(n) {
     let total = 0;
-    for (let i = 0; i < n; i++) {
+    for (let i of Array.from({length: n}, (_, i) => i)) {
         total = (total + i);
     }
     return total;

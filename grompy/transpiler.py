@@ -155,7 +155,26 @@ class PythonToJSVisitor(ast.NodeVisitor):
             self.js_lines.append(f"{self.indent()}" + "}")
 
     # === Function Calls ===
+    def visit_range(self, args: list[str]) -> str:
+        """Convert Python's range() to equivalent JavaScript array."""
+        if len(args) == 1:  # range(stop)
+            return f"Array.from({{length: {args[0]}}}, (_, i) => i)"
+        elif len(args) == 2:  # range(start, stop)
+            return f"Array.from({{length: {args[1]} - {args[0]}}}, (_, i) => i + {args[0]})"
+        elif len(args) == 3:  # range(start, stop, step)
+            raise TranspilerError("range() with step argument is not supported yet")
+        else:
+            raise TranspilerError("Invalid number of arguments for range()")
+
     def visit_Call(self, node: ast.Call):  # noqa: N802
+        if isinstance(node.func, ast.Name):
+            if node.func.id == 'range':
+                args = [self.visit(arg) for arg in node.args]
+                return self.visit_range(args)
+            # All other direct function calls are not supported
+            raise TranspilerError("Only method calls can be transpiled to JavaScript")
+        
+        # For method calls (like obj.method())
         func = self.visit(node.func)
         args = [self.visit(arg) for arg in node.args]
         return f"{func}({', '.join(args)})"
@@ -171,39 +190,13 @@ class PythonToJSVisitor(ast.NodeVisitor):
 
     # === For Loop ===
     def visit_For(self, node: ast.For):  # noqa: N802
-        # Python: for i in range(10)
-        # JavaScript: for (let i = 0; i < 10; i++)
-        # or
-        # Python: for item in items
-        # JavaScript: for (let item of items)
         target = self.visit(node.target)
         iter_expr = self.visit(node.iter)
 
-        # Special case for range()
-        if (
-            isinstance(node.iter, ast.Call)
-            and isinstance(node.iter.func, ast.Name)
-            and node.iter.func.id == "range"
-        ):
-            args = node.iter.args
-            if len(args) == 1:  # range(stop)
-                stop = self.visit(args[0])
-                self.js_lines.append(
-                    f"{self.indent()}for (let {target} = 0; {target} < {stop}; {target}++) "
-                    + "{"
-                )
-            elif len(args) == 2:  # range(start, stop)
-                start = self.visit(args[0])
-                stop = self.visit(args[1])
-                self.js_lines.append(
-                    f"{self.indent()}for (let {target} = {start}; {target} < {stop}; {target}++) "
-                    + "{"
-                )
-        else:
-            # Generic for-of loop
-            self.js_lines.append(
-                f"{self.indent()}for (let {target} of {iter_expr}) " + "{"
-            )
+        # Generic for-of loop for all iterables
+        self.js_lines.append(
+            f"{self.indent()}for (let {target} of {iter_expr}) " + "{"
+        )
 
         self.indent_level += 1
         for stmt in node.body:
@@ -306,6 +299,7 @@ def transpile(fn: Callable) -> str:
 # === Example Usage ===
 def example_function(x, y):
     z = x + y
+    print(z)
     if z > 10:
         return z
     else:
