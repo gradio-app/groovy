@@ -331,15 +331,10 @@ def transpile(fn: Callable) -> str:
 def example_function(x, y):
     z = x + y
     if z > 10:
-        return z
+        print(z)
     else:
-        return 0
+        print(0)
 
 
 if __name__ == "__main__":
-    try:
-        js_code = transpile(example_function)
-        print("Generated JavaScript Code:")
-        print(js_code)
-    except TranspilerError as err:
-        print("Transpilation failed:", err)
+    js_code = transpile(example_function)

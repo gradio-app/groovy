@@ -37,12 +37,27 @@ print(js_code)
 # }
 ```
 
-If Grompy encounters unsupported syntax, it will **complain loudly** (throw a `TranspilationError` with a line number so you know what to fix.
+If Grompy encounters unsupported syntax, it will **complain clearly** (throw a `TranspilationError` with all of the issues along with line numbers and the code that caused the issue, making it easy for developers to fix their code.
+
 
 ```python
-grompy.transpiler.TranspilerError: 
+def example_function(x, y):
+    z = x + y
+    if z > 10:
+        print(z)
+    else:
+        print(0)
 
-Line 2: Unsupported or ambiguous syntax encountered: UnaryOp(op=Not(), operand=Name(id='a', ctx=Load()))
+transpile(example_function)
+```
+
+```
+TranspilerError: 2 issues found:
+
+* Line 4: Unsupported function "print()"
+>> print(z)
+* Line 6: Unsupported function "print()"
+>> print(0)
 ```
 
 ### 📜 License
