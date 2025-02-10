@@ -9,13 +9,19 @@ from collections.abc import Callable
 class TranspilerError(Exception):
     """Exception raised when transpilation fails or encounters ambiguous syntax."""
 
-    def __init__(self, issues: list[tuple[int, str, str]] | None = None, message: str | None = None):
+    def __init__(
+        self,
+        issues: list[tuple[int, str, str]] | None = None,
+        message: str | None = None,
+    ):
         self.issues = issues or []
         if message:
             super().__init__(message)
         else:
             issue_count = len(self.issues)
-            issues_text = f"{issue_count} issue{'s' if issue_count != 1 else ''} found:\n\n"
+            issues_text = (
+                f"{issue_count} issue{'s' if issue_count != 1 else ''} found:\n\n"
+            )
             for line_no, message, code in self.issues:
                 issues_text += f"* Line {line_no}: {message}\n>> {code}\n"
             super().__init__(issues_text)
@@ -31,7 +37,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
 
     def add_issue(self, node: ast.AST, message: str) -> None:
         """Add a transpilation issue with source code context."""
-        if hasattr(node, 'lineno'):
+        if hasattr(node, "lineno"):
             line_no = node.lineno
             line_text = self.source_lines[line_no - 1].strip()
             self.issues.append((line_no, message, line_text))
@@ -192,13 +198,13 @@ class PythonToJSVisitor(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call):  # noqa: N802
         if isinstance(node.func, ast.Name):
-            if node.func.id == 'range':
+            if node.func.id == "range":
                 args = [self.visit(arg) for arg in node.args]
                 return self.visit_range(args)
             # All other direct function calls are not supported
-            self.add_issue(node, f"Unsupported function \"{node.func.id}()\"")
+            self.add_issue(node, f'Unsupported function "{node.func.id}()"')
             return ""
-        
+
         # For method calls (like obj.method())
         func = self.visit(node.func)
         args = [self.visit(arg) for arg in node.args]
@@ -219,9 +225,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
         iter_expr = self.visit(node.iter)
 
         # Generic for-of loop for all iterables
-        self.js_lines.append(
-            f"{self.indent()}for (let {target} of {iter_expr}) " + "{"
-        )
+        self.js_lines.append(f"{self.indent()}for (let {target} of {iter_expr}) " + "{")
 
         self.indent_level += 1
         for stmt in node.body:
@@ -289,7 +293,9 @@ def transpile(fn: Callable) -> str:
         source = inspect.getsource(fn)
         source = textwrap.dedent(source)
     except Exception as e:
-        raise TranspilerError(message="Could not retrieve source code from the function.") from e
+        raise TranspilerError(
+            message="Could not retrieve source code from the function."
+        ) from e
 
     # Parse the source code into an AST.
     try:
@@ -305,7 +311,9 @@ def transpile(fn: Callable) -> str:
             break
 
     if func_node is None:
-        raise TranspilerError(message="No function definition found in the provided source.")
+        raise TranspilerError(
+            message="No function definition found in the provided source."
+        )
 
     # Visit the function node to generate JavaScript code.
     visitor = PythonToJSVisitor()
