@@ -31,10 +31,12 @@ def sum(x, y):
 
 js_code = transpile(sum)
 print(js_code)
+```
 
-# function sum(x, y) {
-#    return x + y;
-# }
+```
+function sum(x, y) {
+   return x + y;
+}
 ```
 
 If Grompy encounters unsupported syntax, it will **complain clearly** (throw a `TranspilationError` with all of the issues along with line numbers and the code that caused the issue, making it easy for developers to fix their code.
