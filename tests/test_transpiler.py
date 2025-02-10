@@ -46,7 +46,7 @@ def test_variable_assignment():
 
 
 def test_for_loop_range():
-    def sum_range(n):
+    def sum_range(n: int):
         total = 0
         for i in range(n):
             total = total + i

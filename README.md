@@ -26,8 +26,11 @@ pip install grompy
 ```python
 from grompy import transpile
 
-def sum(x, y):
-    return x + y
+def sum_range(n: int):
+    total = 0
+    for i in range(n):
+        total = total + i
+    return total
 
 js_code = transpile(sum)
 print(js_code)
@@ -35,10 +38,15 @@ print(js_code)
 produces:
 
 ```
-function sum(x, y) {
-   return x + y;
-}
+function sum_range(n) {
+    let total = 0;
+    for (let i of Array.from({length: n}, (_, i) => i)) {
+        total = (total + i);
+    }
+    return total;
 ```
+
+Note that the JavaScript function is not necessarily minimized or optimized (yet) but it should return exactly the same value when called with the same arguments. 
 
 If Grompy encounters unsupported syntax, it will **complain clearly** (throw a `TranspilationError` with all of the issues along with line numbers and the code that caused the issue, making it easy for developers to fix their code.
 
