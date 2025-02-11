@@ -65,10 +65,8 @@ class PythonToJSVisitor(ast.NodeVisitor):
         params = []
         for arg in node.args.args:
             params.append(arg.arg)
-            # Store type hints in var_types if available
             if arg.annotation and isinstance(arg.annotation, ast.Name):
                 type_name = arg.annotation.id
-                # Try resolving the type from globals; if not found, then check builtins.
                 type_obj = globals().get(type_name, getattr(builtins, type_name, None))
                 if type_obj is not None:
                     self.var_types[arg.arg] = type_obj
@@ -77,7 +75,6 @@ class PythonToJSVisitor(ast.NodeVisitor):
         self.js_lines.append(header)
         self.indent_level += 1
 
-        # Process the function body
         for stmt in node.body:
             self.visit(stmt)
         self.indent_level -= 1
@@ -90,7 +87,6 @@ class PythonToJSVisitor(ast.NodeVisitor):
 
     # === Expression Statements ===
     def visit_Expr(self, node: ast.Expr):  # noqa: N802
-        # For standalone expressions, output them followed by a semicolon.
         expr = self.visit(node.value)
         self.js_lines.append(f"{self.indent()}{expr};")
 
@@ -102,7 +98,6 @@ class PythonToJSVisitor(ast.NodeVisitor):
         target = self.visit(target_node)
         value = self.visit(node.value)
 
-        # For new variable declarations, record the type from the right-hand side if possible.
         if (
             isinstance(target_node, ast.Name)
             and target_node.id not in self.declared_vars
@@ -252,12 +247,10 @@ class PythonToJSVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Name):
             if node.func.id == "range":
                 args = [self.visit(arg) for arg in node.args]
-                # Check that all arguments are numeric
                 for arg in node.args:
                     self.check_type_safety(arg, arg, context="range() argument")
                 return self.visit_range(args)
 
-            # Check types for all function arguments
             for arg in node.args:
                 self.check_type_safety(
                     arg, arg, context=f"argument in {node.func.id}() call"
@@ -408,7 +401,6 @@ def transpile(fn: Callable) -> str:
     except SyntaxError as e:
         raise TranspilerError(message="Could not parse function source.") from e
 
-    # Find either a function definition or lambda in the AST
     func_node = None
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.Lambda)):
@@ -420,11 +412,9 @@ def transpile(fn: Callable) -> str:
             message="No function or lambda definition found in the provided source."
         )
 
-    # Visit the function node to generate JavaScript code.
     visitor = PythonToJSVisitor()
     visitor.source_lines = source.splitlines()
 
-    # Handle lambda functions differently
     if isinstance(func_node, ast.Lambda):
         # Create a simple function wrapper for the lambda
         args = [arg.arg for arg in func_node.args.args]
@@ -438,7 +428,6 @@ def transpile(fn: Callable) -> str:
     else:
         visitor.visit(func_node)
 
-    # If there were any issues, raise them all at once
     if visitor.issues:
         raise TranspilerError(issues=visitor.issues)
 
