@@ -4,7 +4,7 @@ from grompy.transpiler import TranspilerError, transpile
 
 
 def test_basic_arithmetic():
-    def simple_add(a, b):
+    def simple_add(a: int, b: int):
         return a + b
 
     expected = """function simple_add(a, b) {
@@ -14,7 +14,7 @@ def test_basic_arithmetic():
 
 
 def test_if_else():
-    def check_value(x):
+    def check_value(x: int):
         if x > 10:
             return "high"
         else:
@@ -32,7 +32,7 @@ def test_if_else():
 
 
 def test_variable_assignment():
-    def assign_vars(x):
+    def assign_vars(x: int):
         y = x * 2
         z = y + 1
         return z
@@ -63,7 +63,7 @@ def test_for_loop_range():
 
 
 def test_while_loop():
-    def countdown(n):
+    def countdown(n: int):
         while n > 0:
             n = n - 1
         return n
@@ -78,7 +78,7 @@ def test_while_loop():
 
 
 def test_list_operations():
-    def make_list(x):
+    def make_list(x: int):
         arr = [1, 2, x]
         arr[0] = x
         return arr
@@ -92,7 +92,7 @@ def test_list_operations():
 
 
 def test_comparison_operators():
-    def compare_values(a, b):
+    def compare_values(a: int, b: int):
         if a == b:
             return "equal"
         elif a > b:
@@ -115,7 +115,7 @@ def test_comparison_operators():
 
 
 def test_boolean_operations():
-    def logical_ops(a, b):
+    def logical_ops(a: bool, b: bool):
         return a and b or not a
 
     with pytest.raises(TranspilerError) as e:

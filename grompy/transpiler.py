@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import builtins
 import inspect
 import textwrap
 from collections.abc import Callable
@@ -34,6 +35,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
         self.declared_vars = set()  # Track declared variables
         self.issues: list[tuple[int, str, str]] = []  # Track transpilation issues
         self.source_lines: list[str] = []  # Store source code lines
+        self.var_types: dict[str, type | None] = {}  # Track variable types
 
     def add_issue(self, node: ast.AST, message: str) -> None:
         """Add a transpilation issue with source code context."""
@@ -59,13 +61,23 @@ class PythonToJSVisitor(ast.NodeVisitor):
 
     # === Function Definition ===
     def visit_FunctionDef(self, node: ast.FunctionDef):  # noqa: N802
-        # Extract parameter names. (Later we could add type hint checks.)
-        params = [arg.arg for arg in node.args.args]
+        # Extract parameter names and types from type hints
+        params = []
+        for arg in node.args.args:
+            params.append(arg.arg)
+            # Store type hints in var_types if available
+            if arg.annotation and isinstance(arg.annotation, ast.Name):
+                type_name = arg.annotation.id
+                # Try resolving the type from globals; if not found, then check builtins.
+                type_obj = globals().get(type_name, getattr(builtins, type_name, None))
+                if type_obj is not None:
+                    self.var_types[arg.arg] = type_obj
+
         header = f"function {node.name}({', '.join(params)}) " + "{"
         self.js_lines.append(header)
         self.indent_level += 1
 
-        # Process the function body.
+        # Process the function body
         for stmt in node.body:
             self.visit(stmt)
         self.indent_level -= 1
@@ -86,25 +98,58 @@ class PythonToJSVisitor(ast.NodeVisitor):
     def visit_Assign(self, node: ast.Assign):  # noqa: N802
         if len(node.targets) != 1:
             raise TranspilerError("Multiple assignment targets are not supported yet.")
-        target = self.visit(node.targets[0])
+        target_node = node.targets[0]
+        target = self.visit(target_node)
         value = self.visit(node.value)
 
-        # Only use 'let' for new variable declarations (Name nodes)
-        # Skip 'let' for subscript assignments and reassignments
+        # For new variable declarations, record the type from the right-hand side if possible.
         if (
-            isinstance(node.targets[0], ast.Name)
-            and node.targets[0].id not in self.declared_vars
+            isinstance(target_node, ast.Name)
+            and target_node.id not in self.declared_vars
         ):
-            self.declared_vars.add(node.targets[0].id)
+            self.declared_vars.add(target_node.id)
+            expr_type = self.get_expr_type(node.value)
+            if expr_type is not None:
+                self.var_types[target_node.id] = expr_type
             self.js_lines.append(f"{self.indent()}let {target} = {value};")
         else:
             self.js_lines.append(f"{self.indent()}{target} = {value};")
 
     # === Binary Operations ===
+    def check_type_safety(self, node: ast.AST, *exprs: ast.AST, context: str) -> None:
+        """
+        Check if an operation is type-safe.
+        Raises TranspilerError if types are ambiguous or incompatible.
+        """
+        types = [self.get_expr_type(expr) for expr in exprs]
+
+        # Check for unknown types
+        if any(t is None for t in types):
+            self.add_issue(
+                node,
+                f"Ambiguous operation: Cannot determine types for {context}. "
+                "Operation behavior may differ in JavaScript based on types.",
+            )
+            raise TranspilerError()
+
+        # Check for type consistency if multiple expressions
+        if len(types) > 1 and not all(t == types[0] for t in types):
+            type_names = [t.__name__ for t in types]
+            self.add_issue(
+                node,
+                f"Ambiguous operation: Mixed types ({', '.join(type_names)}) in {context}. "
+                "Behavior may differ in JavaScript.",
+            )
+            raise TranspilerError()
+
     def visit_BinOp(self, node: ast.BinOp):  # noqa: N802
         left = self.visit(node.left)
         right = self.visit(node.right)
         op = self.visit(node.op)
+
+        self.check_type_safety(
+            node, node.left, node.right, context=f"'{left} {op} {right}'"
+        )
         return f"({left} {op} {right})"
 
     def visit_Add(self, node: ast.Add):  # noqa: N802, ARG002
@@ -125,7 +170,14 @@ class PythonToJSVisitor(ast.NodeVisitor):
         ops = [self.visit(op) for op in node.ops]
         comparators = [self.visit(comp) for comp in node.comparators]
 
-        # For now, we only support single comparisons
+        # Check types for comparison operations
+        exprs = [node.left] + node.comparators
+        self.check_type_safety(
+            node,
+            *exprs,
+            context=f"comparison {left} {' '.join(ops)} {' '.join(comparators)}",
+        )
+
         if len(ops) != 1 or len(comparators) != 1:
             raise TranspilerError("Only single comparisons are supported")
 
@@ -200,14 +252,34 @@ class PythonToJSVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Name):
             if node.func.id == "range":
                 args = [self.visit(arg) for arg in node.args]
+                # Check that all arguments are numeric
+                for arg in node.args:
+                    self.check_type_safety(arg, arg, context="range() argument")
                 return self.visit_range(args)
-            # All other direct function calls are not supported
+
+            # Check types for all function arguments
+            for arg in node.args:
+                self.check_type_safety(
+                    arg, arg, context=f"argument in {node.func.id}() call"
+                )
+
             self.add_issue(node, f'Unsupported function "{node.func.id}()"')
             return ""
 
         # For method calls (like obj.method())
         func = self.visit(node.func)
         args = [self.visit(arg) for arg in node.args]
+
+        # Check types for method calls
+        if isinstance(node.func, ast.Attribute):
+            self.check_type_safety(
+                node.func, node.func.value, context=f"object in method call {func}"
+            )
+            for arg in node.args:
+                self.check_type_safety(
+                    arg, arg, context=f"argument in method call {func}"
+                )
+
         return f"{func}({', '.join(args)})"
 
     # === Variable Name ===
@@ -224,9 +296,16 @@ class PythonToJSVisitor(ast.NodeVisitor):
         target = self.visit(node.target)
         iter_expr = self.visit(node.iter)
 
-        # Generic for-of loop for all iterables
-        self.js_lines.append(f"{self.indent()}for (let {target} of {iter_expr}) " + "{")
+        # If iterating over a range, record that the loop variable is an int.
+        if (
+            isinstance(node.iter, ast.Call)
+            and isinstance(node.iter.func, ast.Name)
+            and node.iter.func.id == "range"
+        ):
+            if isinstance(node.target, ast.Name):
+                self.var_types[node.target.id] = int
 
+        self.js_lines.append(f"{self.indent()}for (let {target} of {iter_expr}) " + "{")
         self.indent_level += 1
         for stmt in node.body:
             self.visit(stmt)
@@ -284,6 +363,31 @@ class PythonToJSVisitor(ast.NodeVisitor):
             pairs.append(f"{key_js}: {value_js}")
         return f"{{{', '.join(pairs)}}}"
 
+    def get_expr_type(self, node: ast.AST) -> type | None:
+        """Determine the type of an expression if possible."""
+        if isinstance(node, ast.Constant):
+            return type(node.value)
+        elif isinstance(node, ast.Name):
+            # First check if we have a stored type from type hints or assignments
+            if node.id in self.var_types:
+                return self.var_types[node.id]
+            return None
+        elif isinstance(node, ast.BinOp):
+            # For binary operations, check if both operands have the same known type
+            left_type = self.get_expr_type(node.left)
+            right_type = self.get_expr_type(node.right)
+            if left_type == right_type and left_type is not None:
+                return left_type
+            return None
+        elif isinstance(node, ast.Call):
+            # We can't determine the return type of function calls yet
+            return None
+        elif isinstance(node, ast.List):
+            return list
+        elif isinstance(node, ast.Dict):
+            return dict
+        return None
+
 
 def transpile(fn: Callable) -> str:
     """
@@ -330,11 +434,9 @@ def transpile(fn: Callable) -> str:
 # === Example Usage ===
 def example_function(x, y):
     z = x + y
-    if z > 10:
-        print(z)
-    else:
-        print(0)
+    return z
 
 
 if __name__ == "__main__":
     js_code = transpile(example_function)
+    print(js_code)
