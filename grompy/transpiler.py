@@ -38,6 +38,12 @@ class PythonToJSVisitor(ast.NodeVisitor):
         self.source_lines: list[str] = []  # Store source code lines
         self.var_types: dict[str, type | None] = {}  # Track variable types
 
+        # Map built-in functions to their transformation functions.
+        self.builtin_transforms = {
+            "range": self.transform_range,
+            "len": self.transform_len,
+        }
+
     def add_issue(self, node: ast.AST, message: str) -> None:
         """Add a transpilation issue with source code context."""
         if hasattr(node, "lineno"):
@@ -232,9 +238,12 @@ class PythonToJSVisitor(ast.NodeVisitor):
             self.indent_level -= 1
             self.js_lines.append(f"{self.indent()}" + "}")
 
-    # === Function Calls ===
-    def visit_range(self, args: list[str]) -> str:
-        """Convert Python's range() to equivalent JavaScript array."""
+    # === Built-in Function Transformations ===
+    def transform_range(self, node: ast.Call) -> str:
+        """Transform Python's range() to an equivalent JavaScript array expression."""
+        args = [self.visit(arg) for arg in node.args]
+        for arg in node.args:
+            self.check_type_safety(arg, arg, context="range() argument")
         if len(args) == 1:  # range(stop)
             return f"Array.from({{length: {args[0]}}}, (_, i) => i)"
         elif len(args) == 2:  # range(start, stop)
@@ -244,6 +253,20 @@ class PythonToJSVisitor(ast.NodeVisitor):
         else:
             raise TranspilerError("Invalid number of arguments for range()")
 
+    def transform_len(self, node: ast.Call) -> str:
+        """Transform Python's len() to the equivalent JavaScript property access."""
+        if len(node.args) != 1:
+            raise TranspilerError("len() takes exactly one argument")
+        arg_code = self.visit(node.args[0])
+        t = self.get_expr_type(node.args[0])
+        # If the type is a dictionary, return Object.keys(...).length;
+        if t is dict:
+            return f"Object.keys({arg_code}).length"
+        else:
+            # For lists, tuples, and strings, use .length.
+            return f"{arg_code}.length"
+
+    # === Function Calls ===
     def visit_Call(self, node: ast.Call):  # noqa: N802
         try:
             import gradio
@@ -252,22 +275,18 @@ class PythonToJSVisitor(ast.NodeVisitor):
         except ImportError:
             has_gradio = False
 
+        # Handle built-in functions via our transformation mapping.
         if isinstance(node.func, ast.Name):
-            # Handle built-in functions like range
-            if node.func.id == "range":
-                args = [self.visit(arg) for arg in node.args]
-                for arg in node.args:
-                    self.check_type_safety(arg, arg, context="range() argument")
-                return self.visit_range(args)
+            if node.func.id in self.builtin_transforms:
+                return self.builtin_transforms[node.func.id](node)
 
-            # Try to resolve if this is a Gradio component
+            # Try to resolve if this is a Gradio component.
             if has_gradio:
                 try:
                     component_class = getattr(gradio, node.func.id, None)
                     if component_class and issubclass(
                         component_class, gradio.Component
                     ):
-                        # Convert to the special dictionary format
                         kwargs = {}
                         for kw in node.keywords:
                             value = self.visit(kw.value)
@@ -287,10 +306,9 @@ class PythonToJSVisitor(ast.NodeVisitor):
             self.add_issue(node, f'Unsupported function "{node.func.id}()"')
             return ""
 
-        # Handle attribute access like gradio.Textbox
+        # Handle attribute access like gradio.Textbox.
         if isinstance(node.func, ast.Attribute) and has_gradio:
             try:
-                # Try to get the full path
                 if (
                     isinstance(node.func.value, ast.Name)
                     and node.func.value.id == "gradio"
@@ -299,7 +317,6 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     if component_class and issubclass(
                         component_class, gradio.Component
                     ):
-                        # Convert to the special dictionary format
                         kwargs = {}
                         for kw in node.keywords:
                             value = self.visit(kw.value)
@@ -316,7 +333,6 @@ class PythonToJSVisitor(ast.NodeVisitor):
         func = self.visit(node.func)
         args = [self.visit(arg) for arg in node.args]
 
-        # Check types for method calls
         if isinstance(node.func, ast.Attribute):
             self.check_type_safety(
                 node.func, node.func.value, context=f"object in method call {func}"
@@ -374,6 +390,11 @@ class PythonToJSVisitor(ast.NodeVisitor):
         elements = [self.visit(elt) for elt in node.elts]
         return f"[{', '.join(elements)}]"
 
+    # === Tuple ===
+    def visit_Tuple(self, node: ast.Tuple):  # noqa: N802
+        elements = [self.visit(elt) for elt in node.elts]
+        return f"[{', '.join(elements)}]"
+
     # === Subscript ===
     def visit_Subscript(self, node: ast.Subscript):  # noqa: N802
         value = self.visit(node.value)
@@ -410,33 +431,30 @@ class PythonToJSVisitor(ast.NodeVisitor):
             pairs.append(f"{key_js}: {value_js}")
         return f"{{{', '.join(pairs)}}}"
 
-    def visit_Tuple(self, node: ast.Tuple):  # noqa: N802
-        elements = [self.visit(elt) for elt in node.elts]
-        return f"[{', '.join(elements)}]"
-
     def get_expr_type(self, node: ast.AST) -> type | None:
         """Determine the type of an expression if possible."""
         if isinstance(node, ast.Constant):
             return type(node.value)
         elif isinstance(node, ast.Name):
-            # First check if we have a stored type from type hints or assignments
+            # First check if we have a stored type from type hints or assignments.
             if node.id in self.var_types:
                 return self.var_types[node.id]
             return None
         elif isinstance(node, ast.BinOp):
-            # For binary operations, check if both operands have the same known type
             left_type = self.get_expr_type(node.left)
             right_type = self.get_expr_type(node.right)
             if left_type == right_type and left_type is not None:
                 return left_type
             return None
         elif isinstance(node, ast.Call):
-            # We can't determine the return type of function calls yet
+            # We can't determine the return type of function calls yet.
             return None
         elif isinstance(node, ast.List):
             return list
         elif isinstance(node, ast.Dict):
             return dict
+        elif isinstance(node, ast.Tuple):
+            return tuple
         return None
 
 
@@ -452,7 +470,6 @@ def transpile(fn: Callable) -> str:
             message="Could not retrieve source code from the function."
         ) from e
 
-    # Parse the source code into an AST.
     try:
         tree = ast.parse(source)
     except SyntaxError as e:
@@ -473,7 +490,6 @@ def transpile(fn: Callable) -> str:
     visitor.source_lines = source.splitlines()
 
     if isinstance(func_node, ast.Lambda):
-        # Create a simple function wrapper for the lambda
         args = [arg.arg for arg in func_node.args.args]
         visitor.js_lines.append(f"function ({', '.join(args)}) " + "{")
         visitor.indent_level += 1

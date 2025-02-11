@@ -199,3 +199,13 @@ def test_multiple_gradio_components():
     return [text_input, button, output];
 }"""
     assert transpile(create_interface).strip() == expected.strip()
+
+
+def test_len_function():
+    def get_length(arr: list, dictionary: dict):
+        return len(arr), len(dictionary)
+
+    expected = """function get_length(arr, dictionary) {
+    return [arr.length, Object.keys(dictionary).length];
+}"""
+    assert transpile(get_length).strip() == expected.strip()
