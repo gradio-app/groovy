@@ -209,3 +209,13 @@ def test_len_function():
     return [arr.length, Object.keys(dictionary).length];
 }"""
     assert transpile(get_length).strip() == expected.strip()
+
+
+def test_list_comprehension_with_in():
+    def filter_rows_by_term(data: list, search_term: str) -> list:
+        return [row for row in data if search_term in row[0]]
+
+    expected = """function filter_rows_by_term(data, search_term) {
+    return data.filter(row => row[0].includes(search_term));
+}"""
+    assert transpile(filter_rows_by_term).strip() == expected.strip()

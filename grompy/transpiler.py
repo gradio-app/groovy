@@ -174,22 +174,28 @@ class PythonToJSVisitor(ast.NodeVisitor):
 
     # === Comparison Operations ===
     def visit_Compare(self, node: ast.Compare):  # noqa: N802
-        left = self.visit(node.left)
-        ops = [self.visit(op) for op in node.ops]
-        comparators = [self.visit(comp) for comp in node.comparators]
-
-        # Check types for comparison operations
-        exprs = [node.left] + node.comparators
-        self.check_type_safety(
-            node,
-            *exprs,
-            context=f"comparison {left} {' '.join(ops)} {' '.join(comparators)}",
-        )
-
-        if len(ops) != 1 or len(comparators) != 1:
+        if len(node.ops) != 1 or len(node.comparators) != 1:
             raise TranspilerError("Only single comparisons are supported")
-
-        return f"({left} {ops[0]} {comparators[0]})"
+        op = node.ops[0]
+        left = self.visit(node.left)
+        right = self.visit(node.comparators[0])
+        # Handle membership tests separately since types may differ.
+        if isinstance(op, ast.In):
+            # Translate Python "a in b" to JS "b.includes(a)"
+            return f"{right}.includes({left})"
+        elif isinstance(op, ast.NotIn):
+            # Translate Python "a not in b" to JS "!b.includes(a)"
+            return f"!{right}.includes({left})"
+        else:
+            # For other comparisons, check type safety.
+            self.check_type_safety(
+                node,
+                node.left,
+                node.comparators[0],
+                context=f"comparison {left} {self.visit(op)} {right}",
+            )
+            op_str = self.visit(op)
+            return f"({left} {op_str} {right})"
 
     def visit_Gt(self, node: ast.Gt):  # noqa: N802, ARG002
         return ">"
@@ -208,6 +214,13 @@ class PythonToJSVisitor(ast.NodeVisitor):
 
     def visit_NotEq(self, node: ast.NotEq):  # noqa: N802, ARG002
         return "!=="
+
+    # (Optional: in case In or NotIn are visited directly.)
+    def visit_In(self, node: ast.In):
+        return "in"
+
+    def visit_NotIn(self, node: ast.NotIn):
+        return "not in"
 
     # === If Statement ===
     def visit_If(self, node: ast.If):  # noqa: N802
@@ -276,6 +289,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
     def visit_Call(self, node: ast.Call):  # noqa: N802
         try:
             import gradio
+
             has_gradio = True
         except ImportError:
             has_gradio = False
@@ -289,7 +303,9 @@ class PythonToJSVisitor(ast.NodeVisitor):
             if has_gradio:
                 try:
                     component_class = getattr(gradio, node.func.id, None)
-                    if component_class and issubclass(component_class, gradio.Component):
+                    if component_class and issubclass(
+                        component_class, gradio.Component
+                    ):
                         kwargs = {}
                         for kw in node.keywords:
                             value = self.visit(kw.value)
@@ -303,7 +319,9 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     pass
 
             for arg in node.args:
-                self.check_type_safety(arg, arg, context=f"argument in {node.func.id}() call")
+                self.check_type_safety(
+                    arg, arg, context=f"argument in {node.func.id}() call"
+                )
             self.add_issue(node, f'Unsupported function "{node.func.id}()"')
             return ""
 
@@ -311,10 +329,14 @@ class PythonToJSVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Attribute) and has_gradio:
             try:
                 # Now allow for module aliases such as "gr" as well as "gradio"
-                if (isinstance(node.func.value, ast.Name)
-                        and node.func.value.id in {"gradio", "gr"}):
+                if isinstance(node.func.value, ast.Name) and node.func.value.id in {
+                    "gradio",
+                    "gr",
+                }:
                     component_class = getattr(gradio, node.func.attr, None)
-                    if component_class and issubclass(component_class, gradio.Component):
+                    if component_class and issubclass(
+                        component_class, gradio.Component
+                    ):
                         kwargs = {}
                         for kw in node.keywords:
                             value = self.visit(kw.value)
@@ -332,9 +354,13 @@ class PythonToJSVisitor(ast.NodeVisitor):
         args = [self.visit(arg) for arg in node.args]
 
         if isinstance(node.func, ast.Attribute):
-            self.check_type_safety(node.func, node.func.value, context=f"object in method call {func}")
+            self.check_type_safety(
+                node.func, node.func.value, context=f"object in method call {func}"
+            )
             for arg in node.args:
-                self.check_type_safety(arg, arg, context=f"argument in method call {func}")
+                self.check_type_safety(
+                    arg, arg, context=f"argument in method call {func}"
+                )
 
         return f"{func}({', '.join(args)})"
 
@@ -389,6 +415,35 @@ class PythonToJSVisitor(ast.NodeVisitor):
         elements = [self.visit(elt) for elt in node.elts]
         return f"[{', '.join(elements)}]"
 
+    # === List Comprehension ===
+    def visit_ListComp(self, node: ast.ListComp):
+        """
+        Transform a Python list comprehension into a combination of filter and map calls.
+        For example:
+            [x * 2 for x in arr if x > 10]
+        becomes:
+            arr.filter(x => x > 10).map(x => x * 2)
+        """
+        if len(node.generators) != 1:
+            self.add_issue(
+                node, "Only single generator list comprehensions are supported"
+            )
+            raise TranspilerError()
+        gen = node.generators[0]
+        iter_js = self.visit(gen.iter)
+        target_js = self.visit(gen.target)
+        elt_js = self.visit(node.elt)
+        if gen.ifs:
+            # Join multiple ifs with logical AND.
+            conditions = " && ".join(self.visit(if_node) for if_node in gen.ifs)
+            result = f"{iter_js}.filter({target_js} => {conditions})"
+            # Only add a map step if the element expression is different from the loop variable.
+            if not (isinstance(node.elt, ast.Name) and node.elt.id == gen.target.id):
+                result += f".map({target_js} => {elt_js})"
+        else:
+            result = f"{iter_js}.map({target_js} => {elt_js})"
+        return result
+
     # === Subscript ===
     def visit_Subscript(self, node: ast.Subscript):  # noqa: N802
         value = self.visit(node.value)
@@ -406,7 +461,8 @@ class PythonToJSVisitor(ast.NodeVisitor):
     def visit_BoolOp(self, node: ast.BoolOp):  # noqa: N802
         op = self.visit(node.op)
         values = [self.visit(value) for value in node.values]
-        return f"({' ' + op + ' '.join(values)})"
+        # Join the values with the operator.
+        return f"({f' {op} '.join(values)})"
 
     def visit_And(self, node: ast.And):  # noqa: N802, ARG002
         return "&&"
@@ -503,8 +559,8 @@ def transpile(fn: Callable) -> str:
 
 # === Example Usage ===
 
-
 if __name__ == "__main__":
+
     def filter_rows_by_term(data: list, search_term: str) -> list:
         return [row for row in data if search_term in row[0]]
 
