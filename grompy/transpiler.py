@@ -357,6 +357,10 @@ class PythonToJSVisitor(ast.NodeVisitor):
             pairs.append(f"{key_js}: {value_js}")
         return f"{{{', '.join(pairs)}}}"
 
+    def visit_Tuple(self, node: ast.Tuple):  # noqa: N802
+        elements = [self.visit(elt) for elt in node.elts]
+        return f"[{', '.join(elements)}]"
+
     def get_expr_type(self, node: ast.AST) -> type | None:
         """Determine the type of an expression if possible."""
         if isinstance(node, ast.Constant):

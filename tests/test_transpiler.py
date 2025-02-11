@@ -162,3 +162,13 @@ def test_multi_param_lambda_with_None():
     return null;
 }"""
     assert transpile(multi_param).strip() == expected.strip()
+
+
+def test_multiple_return_values():
+    def return_multiple(x: int, y: int):
+        return x, y, x + y
+
+    expected = """function return_multiple(x, y) {
+    return [x, y, (x + y)];
+}"""
+    assert transpile(return_multiple).strip() == expected.strip()
