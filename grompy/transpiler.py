@@ -505,14 +505,8 @@ def transpile(fn: Callable) -> str:
 
 
 if __name__ == "__main__":
-    # import gradio as gr
-    # def change_textbox(choice: str):
-    #     if choice == "short":
-    #         return gr.Textbox(lines=2, visible=True), gr.Button(interactive=True)
-    #     elif choice == "long":
-    #         return gr.Textbox(lines=8, visible=True, value="Lorem ipsum dolor sit amet"), gr.Button(interactive=True)
-    #     else:
-    #         return gr.Textbox(visible=False), gr.Button(interactive=False)
+    def filter_rows_by_term(data: list, search_term: str) -> list:
+        return [row for row in data if search_term in row[0]]
 
-    # js_code = transpile(change_textbox)
+    js_code = transpile(filter_rows_by_term)
     print(js_code)
