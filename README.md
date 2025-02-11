@@ -14,7 +14,7 @@ Grompy is a Python-to-JavaScript transpiler, meaning that it converts Python fun
 ### 🚀 Features
 - Converts simple Python functions into JavaScript equivalents.
 - Supports a subset of the Python standard library along with some Gradio-specific classes.
-- Provides **complete error reporting** when a function can't be transpiled.
+- Provides **complete error reporting** when a function can't be transpiled (either due to no equivalent in JavaScript or ambiguity).
 
 ### 📦 Installation
 Install Grompy via pip:
@@ -71,6 +71,25 @@ TranspilerError: 2 issues found:
 >> print(z)
 * Line 6: Unsupported function "print()"
 >> print(0)
+```
+
+### 🤔 Ambiguity
+Grompy takes a conservative approach when encountering ambiguous types. Instead of making assumptions about types, it will raise a `TranspilationError`. For example, a simple sum function without type hints will fail:
+
+```python
+def sum(a, b):
+    return a + b
+
+transpile(sum)  # Raises TranspilationError: Cannot determine types for parameters 'a' and 'b'
+```
+
+This is because `+` could mean different things in JavaScript depending on the types (string concatenation vs numeric addition). Adding type hints (which is **strongly recommended** for all usage) resolves the ambiguity:
+
+```python
+def sum(a: int, b: int):
+    return a + b
+
+transpile(sum)  # Works! Produces: function sum(a, b) { return (a + b); }
 ```
 
 ### 📜 License
