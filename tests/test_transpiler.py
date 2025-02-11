@@ -144,3 +144,21 @@ def test_dict_operations():
     return d;
 }"""
     assert transpile(create_dict).strip() == expected.strip()
+
+
+def test_simple_lambda():
+    simple_lambda = lambda x: x  # noqa: E731
+
+    expected = """function (x) {
+    return x;
+}"""
+    assert transpile(simple_lambda).strip() == expected.strip()
+
+
+def test_multi_param_lambda_with_None():
+    multi_param = lambda x, y: None  # noqa: E731
+
+    expected = """function (x, y) {
+    return null;
+}"""
+    assert transpile(multi_param).strip() == expected.strip()

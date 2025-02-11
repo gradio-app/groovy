@@ -288,7 +288,8 @@ class PythonToJSVisitor(ast.NodeVisitor):
 
     # === Constants ===
     def visit_Constant(self, node: ast.Constant):  # noqa: N802
-        # Use repr() to generate a JS-friendly literal.
+        if node.value is None:
+            return "null"
         return repr(node.value)
 
     # === For Loop ===
@@ -407,22 +408,35 @@ def transpile(fn: Callable) -> str:
     except SyntaxError as e:
         raise TranspilerError(message="Could not parse function source.") from e
 
-    # Find the first function definition in the AST.
+    # Find either a function definition or lambda in the AST
     func_node = None
-    for node in tree.body:
-        if isinstance(node, ast.FunctionDef):
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.Lambda)):
             func_node = node
             break
 
     if func_node is None:
         raise TranspilerError(
-            message="No function definition found in the provided source."
+            message="No function or lambda definition found in the provided source."
         )
 
     # Visit the function node to generate JavaScript code.
     visitor = PythonToJSVisitor()
     visitor.source_lines = source.splitlines()
-    visitor.visit(func_node)
+
+    # Handle lambda functions differently
+    if isinstance(func_node, ast.Lambda):
+        # Create a simple function wrapper for the lambda
+        args = [arg.arg for arg in func_node.args.args]
+        visitor.js_lines.append(f"function ({', '.join(args)}) " + "{")
+        visitor.indent_level += 1
+        visitor.js_lines.append(
+            f"{visitor.indent()}return {visitor.visit(func_node.body)};"
+        )
+        visitor.indent_level -= 1
+        visitor.js_lines.append("}")
+    else:
+        visitor.visit(func_node)
 
     # If there were any issues, raise them all at once
     if visitor.issues:
