@@ -46,7 +46,7 @@ function sum_range(n) {
     return total;
 ```
 
-Note that the JavaScript function is not necessarily minimized or optimized (yet) but it should return exactly the same value when called with the same arguments. While the internal implementation of the transpiled JavaScript function may differ from the Python version, Grompy tries to guarantee that the return values will be identical for the same inputs.
+Note that the JavaScript function is not necessarily minimized or optimized (yet) but it should return exactly the same value when called with the same arguments. While the internal implementation of the transpiled JavaScript function may differ slightly from the Python version (e.g. Python tuples may get converted to JS arrays), Grompy tries to guarantee that the return values will be identical for the same inputs.
 
 If Grompy encounters unsupported syntax, it will **complain clearly** (throw a `TranspilationError` with all of the issues along with line numbers and the code that caused the issue, making it easy for developers to fix their code.
 
