@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import builtins
 import inspect
+import json
 import textwrap
 from collections.abc import Callable
 
@@ -244,22 +245,74 @@ class PythonToJSVisitor(ast.NodeVisitor):
             raise TranspilerError("Invalid number of arguments for range()")
 
     def visit_Call(self, node: ast.Call):  # noqa: N802
+        try:
+            import gradio
+
+            has_gradio = True
+        except ImportError:
+            has_gradio = False
+
         if isinstance(node.func, ast.Name):
+            # Handle built-in functions like range
             if node.func.id == "range":
                 args = [self.visit(arg) for arg in node.args]
                 for arg in node.args:
                     self.check_type_safety(arg, arg, context="range() argument")
                 return self.visit_range(args)
 
+            # Try to resolve if this is a Gradio component
+            if has_gradio:
+                try:
+                    component_class = getattr(gradio, node.func.id, None)
+                    if component_class and issubclass(
+                        component_class, gradio.Component
+                    ):
+                        # Convert to the special dictionary format
+                        kwargs = {}
+                        for kw in node.keywords:
+                            value = self.visit(kw.value)
+                            try:
+                                kwargs[kw.arg] = ast.literal_eval(value)
+                            except Exception:
+                                kwargs[kw.arg] = value
+                        kwargs["__type__"] = "update"
+                        return json.dumps(kwargs)
+                except Exception:
+                    pass
+
             for arg in node.args:
                 self.check_type_safety(
                     arg, arg, context=f"argument in {node.func.id}() call"
                 )
-
             self.add_issue(node, f'Unsupported function "{node.func.id}()"')
             return ""
 
-        # For method calls (like obj.method())
+        # Handle attribute access like gradio.Textbox
+        if isinstance(node.func, ast.Attribute) and has_gradio:
+            try:
+                # Try to get the full path
+                if (
+                    isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == "gradio"
+                ):
+                    component_class = getattr(gradio, node.func.attr, None)
+                    if component_class and issubclass(
+                        component_class, gradio.Component
+                    ):
+                        # Convert to the special dictionary format
+                        kwargs = {}
+                        for kw in node.keywords:
+                            value = self.visit(kw.value)
+                            try:
+                                kwargs[kw.arg] = ast.literal_eval(value)
+                            except Exception:
+                                kwargs[kw.arg] = value
+                        kwargs["__type__"] = "update"
+                        return json.dumps(kwargs)
+            except Exception:
+                pass
+
+        # For other method calls (like obj.method())
         func = self.visit(node.func)
         args = [self.visit(arg) for arg in node.args]
 

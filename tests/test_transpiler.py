@@ -1,3 +1,4 @@
+import gradio
 import pytest
 
 from grompy.transpiler import TranspilerError, transpile
@@ -172,3 +173,29 @@ def test_multiple_return_values():
     return [x, y, (x + y)];
 }"""
     assert transpile(return_multiple).strip() == expected.strip()
+
+
+def test_single_gradio_component():
+    def create_textbox():
+        return gradio.Textbox(lines=8, visible=True, value="Lorem ipsum")
+
+    expected = """function create_textbox() {
+    return {"lines": 8, "visible": true, "value": "Lorem ipsum", "__type__": "update"};
+}"""
+    assert transpile(create_textbox).strip() == expected.strip()
+
+
+def test_multiple_gradio_components():
+    def create_interface():
+        text_input = gradio.Textbox(label="Input", lines=2)
+        button = gradio.Button(value="Submit", interactive=True)
+        output = gradio.Textbox(label="Output")
+        return text_input, button, output
+
+    expected = """function create_interface() {
+    let text_input = {"label": "Input", "lines": 2, "__type__": "update"};
+    let button = {"value": "Submit", "interactive": true, "__type__": "update"};
+    let output = {"label": "Output", "__type__": "update"};
+    return [text_input, button, output];
+}"""
+    assert transpile(create_interface).strip() == expected.strip()
