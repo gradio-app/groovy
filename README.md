@@ -83,7 +83,7 @@ def sum(a, b):
 transpile(sum)  # Raises TranspilationError: Cannot determine types for parameters 'a' and 'b'
 ```
 
-This is because `+` could mean different things in JavaScript depending on the types (string concatenation vs numeric addition). Adding type hints (which is **strongly recommended** for all usage) resolves the ambiguity:
+This is because `+` could mean different things in JavaScript depending on the types (string concatenation vs numeric addition vs. custom behavior for a custom class). Adding type hints (which is **strongly recommended** for all usage) resolves the ambiguity:
 
 ```python
 def sum(a: int, b: int):

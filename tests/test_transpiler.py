@@ -3,7 +3,17 @@ import pytest
 from grompy.transpiler import TranspilerError, transpile
 
 
-def test_basic_arithmetic():
+def test_basic_arithmetic_without_type_hints():
+    def simple_add(a, b):
+        return a + b
+
+    with pytest.raises(TranspilerError) as e:
+        transpile(simple_add)
+
+    assert "Line 2" in str(e.value)
+
+
+def test_basic_arithmetic_with_type_hints():
     def simple_add(a: int, b: int):
         return a + b
 
