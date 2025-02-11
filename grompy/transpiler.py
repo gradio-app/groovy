@@ -87,6 +87,12 @@ class PythonToJSVisitor(ast.NodeVisitor):
         self.indent_level -= 1
         self.js_lines.append("}")
 
+    # === Attribute ===
+    def visit_Attribute(self, node: ast.Attribute):
+        # Simply return a dotted string: e.g., gr.Textbox
+        value = self.visit(node.value)
+        return f"{value}.{node.attr}"
+
     # === Return Statement ===
     def visit_Return(self, node: ast.Return):  # noqa: N802
         ret_val = "" if node.value is None else self.visit(node.value)
@@ -270,7 +276,6 @@ class PythonToJSVisitor(ast.NodeVisitor):
     def visit_Call(self, node: ast.Call):  # noqa: N802
         try:
             import gradio
-
             has_gradio = True
         except ImportError:
             has_gradio = False
@@ -284,9 +289,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
             if has_gradio:
                 try:
                     component_class = getattr(gradio, node.func.id, None)
-                    if component_class and issubclass(
-                        component_class, gradio.Component
-                    ):
+                    if component_class and issubclass(component_class, gradio.Component):
                         kwargs = {}
                         for kw in node.keywords:
                             value = self.visit(kw.value)
@@ -300,23 +303,18 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     pass
 
             for arg in node.args:
-                self.check_type_safety(
-                    arg, arg, context=f"argument in {node.func.id}() call"
-                )
+                self.check_type_safety(arg, arg, context=f"argument in {node.func.id}() call")
             self.add_issue(node, f'Unsupported function "{node.func.id}()"')
             return ""
 
-        # Handle attribute access like gradio.Textbox.
+        # Handle attribute access like gr.Textbox. (Note the updated check.)
         if isinstance(node.func, ast.Attribute) and has_gradio:
             try:
-                if (
-                    isinstance(node.func.value, ast.Name)
-                    and node.func.value.id == "gradio"
-                ):
+                # Now allow for module aliases such as "gr" as well as "gradio"
+                if (isinstance(node.func.value, ast.Name)
+                        and node.func.value.id in {"gradio", "gr"}):
                     component_class = getattr(gradio, node.func.attr, None)
-                    if component_class and issubclass(
-                        component_class, gradio.Component
-                    ):
+                    if component_class and issubclass(component_class, gradio.Component):
                         kwargs = {}
                         for kw in node.keywords:
                             value = self.visit(kw.value)
@@ -334,13 +332,9 @@ class PythonToJSVisitor(ast.NodeVisitor):
         args = [self.visit(arg) for arg in node.args]
 
         if isinstance(node.func, ast.Attribute):
-            self.check_type_safety(
-                node.func, node.func.value, context=f"object in method call {func}"
-            )
+            self.check_type_safety(node.func, node.func.value, context=f"object in method call {func}")
             for arg in node.args:
-                self.check_type_safety(
-                    arg, arg, context=f"argument in method call {func}"
-                )
+                self.check_type_safety(arg, arg, context=f"argument in method call {func}")
 
         return f"{func}({', '.join(args)})"
 
@@ -508,11 +502,17 @@ def transpile(fn: Callable) -> str:
 
 
 # === Example Usage ===
-def example_function(x, y):
-    z = x + y
-    return z
 
 
 if __name__ == "__main__":
-    js_code = transpile(example_function)
+    # import gradio as gr
+    # def change_textbox(choice: str):
+    #     if choice == "short":
+    #         return gr.Textbox(lines=2, visible=True), gr.Button(interactive=True)
+    #     elif choice == "long":
+    #         return gr.Textbox(lines=8, visible=True, value="Lorem ipsum dolor sit amet"), gr.Button(interactive=True)
+    #     else:
+    #         return gr.Textbox(visible=False), gr.Button(interactive=False)
+
+    # js_code = transpile(change_textbox)
     print(js_code)
