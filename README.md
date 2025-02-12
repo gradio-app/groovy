@@ -94,6 +94,8 @@ transpile(sum)  # Works! Produces: function sum(a, b) { return (a + b); }
 
 ### 🔥 Supported Syntax
 
+Grompy supports the following Python syntax and built-in functions. Other functions will not be transpiled.
+
 **General**
 
 | Python Syntax | JavaScript Equivalent |
@@ -118,9 +120,6 @@ transpile(sum)  # Works! Produces: function sum(a, b) { return (a + b); }
 | `None` | `null` |
 
 
-**Gradio-specific syntax**
-
-// ... existing code ...
 **Gradio-specific syntax**
 
 | Python Syntax | JavaScript Equivalent |
