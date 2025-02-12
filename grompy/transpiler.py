@@ -304,7 +304,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
                 try:
                     component_class = getattr(gradio, node.func.id, None)
                     if component_class and issubclass(
-                        component_class, gradio.Component
+                        component_class, gradio.blocks.Block
                     ):
                         kwargs = {}
                         for kw in node.keywords:
@@ -335,7 +335,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
                 }:
                     component_class = getattr(gradio, node.func.attr, None)
                     if component_class and issubclass(
-                        component_class, gradio.Component
+                        component_class, gradio.blocks.Block
                     ):
                         kwargs = {}
                         for kw in node.keywords:
@@ -560,9 +560,10 @@ def transpile(fn: Callable) -> str:
 # === Example Usage ===
 
 if __name__ == "__main__":
+    import gradio as gr
 
-    def filter_rows_by_term(data: list, search_term: str) -> list:
-        return [row for row in data if search_term in row[0]]
+    def filter_rows_by_term():
+        return gr.Tabs(selected=2)
 
     js_code = transpile(filter_rows_by_term)
     print(js_code)
