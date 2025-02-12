@@ -92,6 +92,42 @@ def sum(a: int, b: int):
 transpile(sum)  # Works! Produces: function sum(a, b) { return (a + b); }
 ```
 
+### 🔥 Supported Syntax
+
+**General**
+
+| Python Syntax | JavaScript Equivalent |
+|--------------|----------------------|
+| `def function(x: int)` | `function function(x)` |
+| `x + y`, `x - y`, `x * y`, `x / y` | `(x + y)`, `(x - y)`, `(x * y)`, `(x / y)` |
+| `x > y`, `x < y`, `x >= y`, `x <= y` | `(x > y)`, `(x < y)`, `(x >= y)`, `(x <= y)` |
+| `x == y`, `x != y` | `(x === y)`, `(x !== y)` |
+| `x in list`, `x not in list` | `list.includes(x)`, `!list.includes(x)` |
+| `x = value` | `let x = value` |
+| `if condition: ... elif: ... else: ...` | `if (condition) { ... } else if { ... } else { ... }` |
+| `for x in range(n)` | `for (let x of Array.from({length: n}, (_, i) => i))` |
+| `for x in list` | `for (let x of list)` |
+| `while condition` | `while (condition)` |
+| `[x for x in list if condition]` | `list.filter(x => condition).map(x => x)` |
+| `len(list)` | `list.length` |
+| `len(dict)` | `Object.keys(dict).length` |
+| `[1, 2, 3]` | `[1, 2, 3]` |
+| `(1, 2, 3)` | `[1, 2, 3]` |
+| `{"key": "value"}` | `{"key": "value"}` |
+| `x and y`, `x or y` | `(x && y)`, `(x || y)` |
+| `None` | `null` |
+
+
+**Gradio-specific syntax**
+
+// ... existing code ...
+**Gradio-specific syntax**
+
+| Python Syntax | JavaScript Equivalent |
+|--------------|----------------------|
+| `gr.Component(param=value)` | `{"param": "value", "__type__": "update"}` |
+
+
 ### 📜 License
 Grompy is open-source under the [MIT License](https://github.com/abidlabs/grompy/blob/main/LICENSE).
 
