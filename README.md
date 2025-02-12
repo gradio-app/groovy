@@ -1,6 +1,6 @@
 <p align="center">
     <a href="https://pypi.org/project/grompy/"><img alt="PyPI" src="https://img.shields.io/pypi/v/grompy"></a>
-    <img alt="Python version" src="https://img.shields.io/badge/python-3.10+-important">
+    <img alt="Python version" src="https://img.shields.io/badge/python-3.10+-success">
     <a href="https://github.com/abidlabs/grompy/actions/workflows/format.yml"><img alt="Format" src="https://github.com/abidlabs/grompy/actions/workflows/format.yml/badge.svg"></a>
     <a href="https://github.com/abidlabs/grompy/actions/workflows/test.yml"><img alt="Test" src="https://github.com/abidlabs/grompy/actions/workflows/test.yml/badge.svg"></a>
 </p>
