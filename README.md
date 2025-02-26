@@ -1,8 +1,8 @@
 <p align="center">
-    <a href="https://pypi.org/project/grompy/"><img alt="PyPI" src="https://img.shields.io/pypi/v/grompy"></a>
+    <a href="https://pypi.org/project/groovy/"><img alt="PyPI" src="https://img.shields.io/pypi/v/groovy"></a>
     <img alt="Python version" src="https://img.shields.io/badge/python-3.10+-success">
-    <a href="https://github.com/abidlabs/grompy/actions/workflows/format.yml"><img alt="Format" src="https://github.com/abidlabs/grompy/actions/workflows/format.yml/badge.svg"></a>
-    <a href="https://github.com/abidlabs/grompy/actions/workflows/test.yml"><img alt="Test" src="https://github.com/abidlabs/grompy/actions/workflows/test.yml/badge.svg"></a>
+    <a href="https://github.com/abidlabs/groovy/actions/workflows/format.yml"><img alt="Format" src="https://github.com/abidlabs/groovy/actions/workflows/format.yml/badge.svg"></a>
+    <a href="https://github.com/abidlabs/groovy/actions/workflows/test.yml"><img alt="Test" src="https://github.com/abidlabs/groovy/actions/workflows/test.yml/badge.svg"></a>
 </p>
 
 
@@ -10,7 +10,7 @@
 <img src="https://github.com/user-attachments/assets/49d40a48-3c73-4911-8033-250cfa7aafd4" width=400>
 </p>
 
-Groovy is a Python-to-JavaScript transpiler, meaning that it converts Python functions to their JavaScript equivalents. It is used in the [Gradio](https://gradio.app) library, so that developers can write functions in Python and have them run as fast as client-side JavaScript ⚡. Instead of aiming for full coverage of Python features, Grompy prioritizes **clear error reporting** for unsupported Python code, making it easier for developers to modify their functions accordingly.
+Groovy is a Python-to-JavaScript transpiler, meaning that it converts Python functions to their JavaScript equivalents. It is used in the [Gradio](https://gradio.app) library, so that developers can write functions in Python and have them run as fast as client-side JavaScript ⚡. Instead of aiming for full coverage of Python features, groovy prioritizes **clear error reporting** for unsupported Python code, making it easier for developers to modify their functions accordingly.
 
 ### 🚀 Features
 - Converts simple Python functions into JavaScript equivalents.
@@ -18,14 +18,14 @@ Groovy is a Python-to-JavaScript transpiler, meaning that it converts Python fun
 - Provides **complete error reporting** when a function can't be transpiled (either due to no equivalent in JavaScript or ambiguity).
 
 ### 📦 Installation
-Install Grompy via pip:
+Install groovy via pip:
 ```bash
-pip install grompy
+pip install groovy
 ```
 
 ### 🔧 Usage
 ```python
-from grompy import transpile
+from groovy import transpile
 
 def sum_range(n: int):
     total = 0
@@ -47,9 +47,9 @@ function sum_range(n) {
     return total;
 ```
 
-Note that the JavaScript function is not necessarily minimized or optimized (yet) but it should return exactly the same value when called with the same arguments. While the internal implementation of the transpiled JavaScript function may differ slightly from the Python version (e.g. Python tuples may get converted to JS arrays), Grompy tries to guarantee that the return values will be identical for the same inputs.
+Note that the JavaScript function is not necessarily minimized or optimized (yet) but it should return exactly the same value when called with the same arguments. While the internal implementation of the transpiled JavaScript function may differ slightly from the Python version (e.g. Python tuples may get converted to JS arrays), groovy tries to guarantee that the return values will be identical for the same inputs.
 
-If Grompy encounters unsupported syntax, it will **complain clearly** (throw a `TranspilationError` with all of the issues along with line numbers and the code that caused the issue, making it easy for developers to fix their code.
+If groovy encounters unsupported syntax, it will **complain clearly** (throw a `TranspilationError` with all of the issues along with line numbers and the code that caused the issue, making it easy for developers to fix their code.
 
 
 ```python
@@ -75,7 +75,7 @@ TranspilerError: 2 issues found:
 ```
 
 ### 🤔 Ambiguity
-Grompy takes a conservative approach when encountering ambiguous types. Instead of making assumptions about types, it will raise a `TranspilationError`. For example, a simple sum function without type hints will fail:
+groovy takes a conservative approach when encountering ambiguous types. Instead of making assumptions about types, it will raise a `TranspilationError`. For example, a simple sum function without type hints will fail:
 
 ```python
 def sum(a, b):
@@ -95,7 +95,7 @@ transpile(sum)  # Works! Produces: function sum(a, b) { return (a + b); }
 
 ### 🔥 Supported Syntax
 
-Grompy supports the following Python syntax and built-in functions. Other functions will not be transpiled.
+groovy supports the following Python syntax and built-in functions. Other functions will not be transpiled.
 
 **General**
 
@@ -129,7 +129,7 @@ Grompy supports the following Python syntax and built-in functions. Other functi
 
 
 ### 📜 License
-Grompy is open-source under the [MIT License](https://github.com/abidlabs/grompy/blob/main/LICENSE).
+groovy is open-source under the [MIT License](https://github.com/abidlabs/groovy/blob/main/LICENSE).
 
 ---
-Contributions to increase coverage of the Python library that Grompy can transpile are welcome! We welcome AI-generated PRs if the rationale is clear to follow, PRs are not too large in scope, and tests are included.
+Contributions to increase coverage of the Python library that groovy can transpile are welcome! We welcome AI-generated PRs if the rationale is clear to follow, PRs are not too large in scope, and tests are included.
