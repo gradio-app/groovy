@@ -274,3 +274,45 @@ def test_validate_multiple_gradio_returns():
     return [{"placeholder": "Component 1", "__type__": "update"}, {"variant": "primary", "__type__": "update"}];
 }"""
     assert result.strip() == expected.strip()
+
+
+def test_validate_no_value_param():
+    def valid_component():
+        return gradio.Textbox(placeholder="This is valid")
+    
+    # This should pass validation
+    result = transpile(valid_component, validate=True)
+    expected = """function valid_component() {
+    return {"placeholder": "This is valid", "__type__": "update"};
+}"""
+    assert result.strip() == expected.strip()
+
+
+def test_validate_with_value_param():
+    def invalid_component():
+        return gradio.Textbox(value="This is invalid")
+    
+    with pytest.raises(TranspilerError) as e:
+        transpile(invalid_component, validate=True)
+    
+    assert "Function must only return Gradio component updates" in str(e.value)
+
+
+def test_validate_with_positional_args():
+    def invalid_positional():
+        return gradio.Textbox("This is invalid")
+    
+    with pytest.raises(TranspilerError) as e:
+        transpile(invalid_positional, validate=True)
+    
+    assert "Function must only return Gradio component updates" in str(e.value)
+
+
+def test_validate_mixed_valid_invalid_components():
+    def mixed_components():
+        return gradio.Textbox(placeholder="Valid"), gradio.Button(value="Invalid")
+    
+    with pytest.raises(TranspilerError) as e:
+        transpile(mixed_components, validate=True)
+    
+    assert "Function must only return Gradio component updates" in str(e.value)

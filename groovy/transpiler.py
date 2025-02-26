@@ -621,9 +621,25 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
         if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
             # Check for gr.Component or gradio.Component
             if node.func.value.id in {"gr", "gradio"}:
+                # Check that there are no positional arguments
+                if node.args:
+                    return False
+                
+                # Check that 'value' is not in the keyword arguments
+                for kw in node.keywords:
+                    if kw.arg == "value":
+                        return False
                 return True
         elif isinstance(node.func, ast.Name):
             # Check for direct Component call if imported
+            # Check that there are no positional arguments
+            if node.args:
+                return False
+            
+            # Check that 'value' is not in the keyword arguments
+            for kw in node.keywords:
+                if kw.arg == "value":
+                    return False
             return True
     
     # Check for tuple or list of Gradio components
