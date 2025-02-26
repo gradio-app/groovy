@@ -508,10 +508,28 @@ class PythonToJSVisitor(ast.NodeVisitor):
         return None
 
 
-def transpile(fn: Callable) -> str:
+def transpile(fn: Callable, validate: bool = False) -> str:
     """
     Transpiles a Python function to JavaScript and returns the JavaScript code as a string.
+
+    Parameters:
+        fn: The Python function to transpile.
+        validate: If True, the function will be validated to ensure it takes no arguments & only returns gradio component property updates.
+
+    Returns:
+        The JavaScript code as a string.
+
+    Raises:
+        TranspilerError: If the function cannot be transpiled or if the transpiled function is not valid.
     """
+    if validate:
+        sig = inspect.signature(fn)
+        if sig.parameters:
+            param_names = list(sig.parameters.keys())
+            raise TranspilerError(
+                message=f"Function must take no arguments, but got: {param_names}"
+            )
+
     try:
         source = inspect.getsource(fn)
         source = textwrap.dedent(source)

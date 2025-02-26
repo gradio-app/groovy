@@ -219,3 +219,26 @@ def test_list_comprehension_with_in():
     return data.filter(row => row[0].includes(search_term));
 }"""
     assert transpile(filter_rows_by_term).strip() == expected.strip()
+
+
+def test_validate_no_arguments():
+    def no_args_function():
+        return gradio.Textbox(value="This is valid")
+
+    # This should pass validation
+    result = transpile(no_args_function, validate=True)
+    expected = """function no_args_function() {
+    return {"value": "This is valid", "__type__": "update"};
+}"""
+    assert result.strip() == expected.strip()
+
+
+def test_validate_with_arguments():
+    def function_with_args(text_input):
+        return gradio.Textbox(value=f"You entered: {text_input}")
+
+    # This should fail validation
+    with pytest.raises(TranspilerError) as e:
+        transpile(function_with_args, validate=True)
+
+    assert "text_input" in str(e.value)
