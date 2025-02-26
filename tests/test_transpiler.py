@@ -1,7 +1,7 @@
 import gradio
 import pytest
 
-from grompy.transpiler import TranspilerError, transpile
+from groovy.transpiler import TranspilerError, transpile
 
 
 def test_basic_arithmetic_without_type_hints():
