@@ -225,7 +225,6 @@ def test_validate_no_arguments():
     def no_args_function():
         return gradio.Textbox(placeholder="This is valid")
 
-    # This should pass validation
     result = transpile(no_args_function, validate=True)
     expected = """function no_args_function() {
     return {"placeholder": "This is valid", "__type__": "update"};
@@ -237,8 +236,41 @@ def test_validate_with_arguments():
     def function_with_args(text_input):
         return gradio.Textbox(placeholder=f"You entered: {text_input}")
 
-    # This should fail validation
     with pytest.raises(TranspilerError) as e:
         transpile(function_with_args, validate=True)
 
     assert "text_input" in str(e.value)
+
+
+def test_validate_non_gradio_return():
+    def invalid_return_function():
+        return "This is not a Gradio component"
+    
+    with pytest.raises(TranspilerError) as e:
+        transpile(invalid_return_function, validate=True)
+    
+    assert "Function must only return Gradio component updates" in str(e.value)
+
+
+def test_validate_mixed_return_paths():
+    def mixed_return_function():
+        if 5:
+            return gradio.Textbox(placeholder="Valid path")
+        else:
+            return "Invalid path"
+    
+    with pytest.raises(TranspilerError) as e:
+        transpile(mixed_return_function, validate=True)
+    
+    assert "Function must only return Gradio component updates" in str(e.value)
+
+
+def test_validate_multiple_gradio_returns():
+    def multiple_components():
+        return gradio.Textbox(placeholder="Component 1"), gradio.Button(variant="primary")
+    
+    result = transpile(multiple_components, validate=True)
+    expected = """function multiple_components() {
+    return [{"placeholder": "Component 1", "__type__": "update"}, {"variant": "primary", "__type__": "update"}];
+}"""
+    assert result.strip() == expected.strip()

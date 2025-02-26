@@ -527,9 +527,9 @@ def transpile(fn: Callable, validate: bool = False) -> str:
         if sig.parameters:
             param_names = list(sig.parameters.keys())
             raise TranspilerError(
-                message=f"Function must take no arguments, but got: {param_names}"
+                message=f"Function must take no arguments for client-side use, but got: {param_names}"
             )
-
+    
     try:
         source = inspect.getsource(fn)
         source = textwrap.dedent(source)
@@ -542,6 +542,37 @@ def transpile(fn: Callable, validate: bool = False) -> str:
         tree = ast.parse(source)
     except SyntaxError as e:
         raise TranspilerError(message="Could not parse function source.") from e
+
+    if validate:
+        try:
+            import gradio
+            has_gradio = True
+        except ImportError:
+            has_gradio = False
+            raise TranspilerError(message="Gradio must be installed for validation.")
+        
+        func_node = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == fn.__name__:
+                func_node = node
+                break
+        
+        if func_node:
+            return_nodes = []
+            for node in ast.walk(func_node):
+                if isinstance(node, ast.Return) and node.value is not None:
+                    return_nodes.append(node)
+            
+            if not return_nodes:
+                raise TranspilerError(message="Function must return Gradio component updates, but no return statement found.")
+            
+            for return_node in return_nodes:
+                if not _is_valid_gradio_return(return_node.value):
+                    line_no = return_node.lineno
+                    line_text = source.splitlines()[line_no - 1].strip()
+                    raise TranspilerError(
+                        message=f"Function must only return Gradio component updates. Invalid return at line {line_no}: {line_text}"
+                    )
 
     func_node = None
     for node in ast.walk(tree):
@@ -573,6 +604,43 @@ def transpile(fn: Callable, validate: bool = False) -> str:
         raise TranspilerError(issues=visitor.issues)
 
     return "\n".join(visitor.js_lines)
+
+
+def _is_valid_gradio_return(node: ast.AST) -> bool:
+    """
+    Check if a return value is a valid Gradio component or collection of components.
+    
+    Args:
+        node: The AST node representing the return value
+        
+    Returns:
+        bool: True if the return value is valid, False otherwise
+    """
+    # Check for direct Gradio component call
+    if isinstance(node, ast.Call):
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+            # Check for gr.Component or gradio.Component
+            if node.func.value.id in {"gr", "gradio"}:
+                return True
+        elif isinstance(node.func, ast.Name):
+            # Check for direct Component call if imported
+            return True
+    
+    # Check for tuple or list of Gradio components
+    elif isinstance(node, (ast.Tuple, ast.List)):
+        # Empty tuple/list is not valid
+        if not node.elts:
+            return False
+        # All elements must be valid Gradio returns
+        return all(_is_valid_gradio_return(elt) for elt in node.elts)
+    
+    # Check for variable that might be a Gradio component
+    elif isinstance(node, ast.Name):
+        # We can't easily determine if a variable is a Gradio component
+        # without executing the code, so we'll allow it
+        return True
+    
+    return False
 
 
 # === Example Usage ===
