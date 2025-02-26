@@ -514,7 +514,7 @@ def transpile(fn: Callable, validate: bool = False) -> str:
 
     Parameters:
         fn: The Python function to transpile.
-        validate: If True, the function will be validated to ensure it takes no arguments & only returns gradio component property updates.
+        validate: If True, the function will be validated to ensure it takes no arguments & only returns gradio component property updates. This is used when Groovy is used inside Gradio.
 
     Returns:
         The JavaScript code as a string.
@@ -619,43 +619,28 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
     # Check for direct Gradio component call
     if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
-            # Check for gr.Component or gradio.Component
             if node.func.value.id in {"gr", "gradio"}:
-                # Check that there are no positional arguments
                 if node.args:
                     return False
                 
-                # Check that 'value' is not in the keyword arguments
                 for kw in node.keywords:
                     if kw.arg == "value":
                         return False
                 return True
         elif isinstance(node.func, ast.Name):
-            # Check for direct Component call if imported
-            # Check that there are no positional arguments
             if node.args:
                 return False
             
-            # Check that 'value' is not in the keyword arguments
             for kw in node.keywords:
                 if kw.arg == "value":
                     return False
             return True
     
-    # Check for tuple or list of Gradio components
     elif isinstance(node, (ast.Tuple, ast.List)):
-        # Empty tuple/list is not valid
         if not node.elts:
             return False
-        # All elements must be valid Gradio returns
         return all(_is_valid_gradio_return(elt) for elt in node.elts)
-    
-    # Check for variable that might be a Gradio component
-    elif isinstance(node, ast.Name):
-        # We can't easily determine if a variable is a Gradio component
-        # without executing the code, so we'll allow it
-        return True
-    
+        
     return False
 
 
