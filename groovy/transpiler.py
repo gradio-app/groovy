@@ -529,7 +529,7 @@ def transpile(fn: Callable, validate: bool = False) -> str:
             raise TranspilerError(
                 message=f"Function must take no arguments for client-side use, but got: {param_names}"
             )
-    
+
     try:
         source = inspect.getsource(fn)
         source = textwrap.dedent(source)
@@ -545,27 +545,27 @@ def transpile(fn: Callable, validate: bool = False) -> str:
 
     if validate:
         try:
-            import gradio
-            has_gradio = True
+            import gradio  # noqa: F401
         except ImportError:
-            has_gradio = False
             raise TranspilerError(message="Gradio must be installed for validation.")
-        
+
         func_node = None
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and node.name == fn.__name__:
                 func_node = node
                 break
-        
+
         if func_node:
             return_nodes = []
             for node in ast.walk(func_node):
                 if isinstance(node, ast.Return) and node.value is not None:
                     return_nodes.append(node)
-            
+
             if not return_nodes:
-                raise TranspilerError(message="Function must return Gradio component updates, but no return statement found.")
-            
+                raise TranspilerError(
+                    message="Function must return Gradio component updates, but no return statement found."
+                )
+
             for return_node in return_nodes:
                 if not _is_valid_gradio_return(return_node.value):
                     line_no = return_node.lineno
@@ -609,20 +609,22 @@ def transpile(fn: Callable, validate: bool = False) -> str:
 def _is_valid_gradio_return(node: ast.AST) -> bool:
     """
     Check if a return value is a valid Gradio component or collection of components.
-    
+
     Args:
         node: The AST node representing the return value
-        
+
     Returns:
         bool: True if the return value is valid, False otherwise
     """
     # Check for direct Gradio component call
     if isinstance(node, ast.Call):
-        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name):
+        if isinstance(node.func, ast.Attribute) and isinstance(
+            node.func.value, ast.Name
+        ):
             if node.func.value.id in {"gr", "gradio"}:
                 if node.args:
                     return False
-                
+
                 for kw in node.keywords:
                     if kw.arg == "value":
                         return False
@@ -630,17 +632,17 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
         elif isinstance(node.func, ast.Name):
             if node.args:
                 return False
-            
+
             for kw in node.keywords:
                 if kw.arg == "value":
                     return False
             return True
-    
+
     elif isinstance(node, (ast.Tuple, ast.List)):
         if not node.elts:
             return False
         return all(_is_valid_gradio_return(elt) for elt in node.elts)
-        
+
     return False
 
 
