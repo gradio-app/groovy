@@ -514,7 +514,7 @@ def transpile(fn: Callable, validate: bool = False) -> str:
 
     Parameters:
         fn: The Python function to transpile.
-        validate: If True, the function will be validated to ensure it takes no arguments & only returns gradio component property updates. This is used when Groovy is used inside Gradio.
+        validate: If True, the function will be validated to ensure it takes no arguments & only returns gradio component property updates. This is used when Groovy is used inside Gradio and `gradio` must be installed to use this.
 
     Returns:
         The JavaScript code as a string.
@@ -652,7 +652,7 @@ if __name__ == "__main__":
     import gradio as gr
 
     def filter_rows_by_term():
-        return gr.Tabs(selected=2)
+        return gr.Tabs(selected=2, visible=True)
 
     js_code = transpile(filter_rows_by_term)
     print(js_code)
