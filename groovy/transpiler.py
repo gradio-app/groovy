@@ -290,6 +290,11 @@ class PythonToJSVisitor(ast.NodeVisitor):
         """Handle Gradio component calls and return JSON representation."""
         kwargs = {}
         for kw in node.keywords:
+            if isinstance(kw.value, ast.Constant) and kw.value.value is None:
+                # None values should remain None in the kwargs dictionary
+                # so that they are converted to null, not "null" in json.dumps().
+                kwargs[kw.arg] = None
+                continue
             value = self.visit(kw.value)
             try:
                 kwargs[kw.arg] = ast.literal_eval(value)
