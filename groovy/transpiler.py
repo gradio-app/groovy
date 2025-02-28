@@ -286,6 +286,23 @@ class PythonToJSVisitor(ast.NodeVisitor):
             return f"{arg_code}.length"
 
     # === Function Calls ===
+    def _handle_gradio_component_updates(self, node: ast.Call):
+        """Handle Gradio component calls and return JSON representation."""
+        kwargs = {}
+        for kw in node.keywords:
+            if isinstance(kw.value, ast.Constant) and kw.value.value is None:
+                # None values should remain None in the kwargs dictionary
+                # so that they are converted to null, not "null" in json.dumps().
+                kwargs[kw.arg] = None
+                continue
+            value = self.visit(kw.value)
+            try:
+                kwargs[kw.arg] = ast.literal_eval(value)
+            except Exception:
+                kwargs[kw.arg] = value
+        kwargs["__type__"] = "update"
+        return json.dumps(kwargs)
+
     def visit_Call(self, node: ast.Call):  # noqa: N802
         try:
             import gradio
@@ -302,19 +319,15 @@ class PythonToJSVisitor(ast.NodeVisitor):
             # Try to resolve if this is a Gradio component.
             if has_gradio:
                 try:
+                    # Handle direct update() call
+                    if node.func.id == "update":
+                        return self._handle_gradio_component_updates(node)
+
                     component_class = getattr(gradio, node.func.id, None)
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
                     ):
-                        kwargs = {}
-                        for kw in node.keywords:
-                            value = self.visit(kw.value)
-                            try:
-                                kwargs[kw.arg] = ast.literal_eval(value)
-                            except Exception:
-                                kwargs[kw.arg] = value
-                        kwargs["__type__"] = "update"
-                        return json.dumps(kwargs)
+                        return self._handle_gradio_component_updates(node)
                 except Exception:
                     pass
 
@@ -333,19 +346,15 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     "gradio",
                     "gr",
                 }:
+                    # Handle gr.update() call
+                    if node.func.attr == "update":
+                        return self._handle_gradio_component_updates(node)
+
                     component_class = getattr(gradio, node.func.attr, None)
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
                     ):
-                        kwargs = {}
-                        for kw in node.keywords:
-                            value = self.visit(kw.value)
-                            try:
-                                kwargs[kw.arg] = ast.literal_eval(value)
-                            except Exception:
-                                kwargs[kw.arg] = value
-                        kwargs["__type__"] = "update"
-                        return json.dumps(kwargs)
+                        return self._handle_gradio_component_updates(node)
             except Exception:
                 pass
 
@@ -514,7 +523,7 @@ def transpile(fn: Callable, validate: bool = False) -> str:
 
     Parameters:
         fn: The Python function to transpile.
-        validate: If True, the function will be validated to ensure it takes no arguments & only returns gradio component property updates. This is used when Groovy is used inside Gradio.
+        validate: If True, the function will be validated to ensure it takes no arguments & only returns gradio component property updates. This is used when Groovy is used inside Gradio and `gradio` must be installed to use this.
 
     Returns:
         The JavaScript code as a string.
@@ -622,21 +631,43 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
             node.func.value, ast.Name
         ):
             if node.func.value.id in {"gr", "gradio"}:
-                if node.args:
-                    return False
+                try:
+                    import gradio
 
-                for kw in node.keywords:
-                    if kw.arg == "value":
-                        return False
-                return True
-        elif isinstance(node.func, ast.Name):
-            if node.args:
+                    if node.func.attr == "update":
+                        return True
+
+                    component_class = getattr(gradio, node.func.attr, None)
+                    if component_class and issubclass(
+                        component_class, gradio.blocks.Block
+                    ):
+                        if node.args:
+                            return False
+                        for kw in node.keywords:
+                            if kw.arg == "value":
+                                return False
+                        return True
+                except (ImportError, AttributeError):
+                    pass
                 return False
+        elif isinstance(node.func, ast.Name):
+            try:
+                import gradio
 
-            for kw in node.keywords:
-                if kw.arg == "value":
-                    return False
-            return True
+                if node.func.id == "update":
+                    return True
+
+                component_class = getattr(gradio, node.func.id, None)
+                if component_class and issubclass(component_class, gradio.blocks.Block):
+                    if node.args:
+                        return False
+                    for kw in node.keywords:
+                        if kw.arg == "value":
+                            return False
+                    return True
+            except (ImportError, AttributeError):
+                pass
+            return False
 
     elif isinstance(node, (ast.Tuple, ast.List)):
         if not node.elts:
@@ -652,7 +683,7 @@ if __name__ == "__main__":
     import gradio as gr
 
     def filter_rows_by_term():
-        return gr.Tabs(selected=2)
+        return gr.update(selected=2, visible=True, info=None)
 
-    js_code = transpile(filter_rows_by_term)
+    js_code = transpile(filter_rows_by_term, validate=True)
     print(js_code)
