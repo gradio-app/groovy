@@ -318,3 +318,13 @@ def test_validate_mixed_valid_invalid_components():
         transpile(mixed_components, validate=True)
 
     assert "Function must only return Gradio component updates" in str(e.value)
+
+
+def test_gradio_component_with_none_values():
+    def component_with_none():
+        return gradio.Textbox(visible=True, info=None)
+
+    expected = """function component_with_none() {
+    return {"visible": true, "info": null, "__type__": "update"};
+}"""
+    assert transpile(component_with_none).strip() == expected.strip()
