@@ -286,6 +286,18 @@ class PythonToJSVisitor(ast.NodeVisitor):
             return f"{arg_code}.length"
 
     # === Function Calls ===
+    def _handle_gradio_component(self, component_class, node):
+        """Handle Gradio component calls and return JSON representation."""
+        kwargs = {}
+        for kw in node.keywords:
+            value = self.visit(kw.value)
+            try:
+                kwargs[kw.arg] = ast.literal_eval(value)
+            except Exception:
+                kwargs[kw.arg] = value
+        kwargs["__type__"] = "update"
+        return json.dumps(kwargs)
+
     def visit_Call(self, node: ast.Call):  # noqa: N802
         try:
             import gradio
@@ -306,15 +318,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
                     ):
-                        kwargs = {}
-                        for kw in node.keywords:
-                            value = self.visit(kw.value)
-                            try:
-                                kwargs[kw.arg] = ast.literal_eval(value)
-                            except Exception:
-                                kwargs[kw.arg] = value
-                        kwargs["__type__"] = "update"
-                        return json.dumps(kwargs)
+                        return self._handle_gradio_component(component_class, node)
                 except Exception:
                     pass
 
@@ -337,15 +341,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
                     ):
-                        kwargs = {}
-                        for kw in node.keywords:
-                            value = self.visit(kw.value)
-                            try:
-                                kwargs[kw.arg] = ast.literal_eval(value)
-                            except Exception:
-                                kwargs[kw.arg] = value
-                        kwargs["__type__"] = "update"
-                        return json.dumps(kwargs)
+                        return self._handle_gradio_component(component_class, node)
             except Exception:
                 pass
 
@@ -664,7 +660,7 @@ if __name__ == "__main__":
     import gradio as gr
 
     def filter_rows_by_term():
-        return gr.Tabs(selected=2, visible=True)
+        return gr.Tabs(selected=2, visible=True, info=None)
 
     js_code = transpile(filter_rows_by_term)
     print(js_code)
