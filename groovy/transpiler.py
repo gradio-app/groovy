@@ -318,7 +318,9 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
                     ):
-                        return self._handle_gradio_component_updates(component_class, node)
+                        return self._handle_gradio_component_updates(
+                            component_class, node
+                        )
                 except Exception:
                     pass
 
@@ -341,7 +343,9 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
                     ):
-                        return self._handle_gradio_component_updates(component_class, node)
+                        return self._handle_gradio_component_updates(
+                            component_class, node
+                        )
             except Exception:
                 pass
 
@@ -620,8 +624,11 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
             if node.func.value.id in {"gr", "gradio"}:
                 try:
                     import gradio
+
                     component_class = getattr(gradio, node.func.attr, None)
-                    if component_class and issubclass(component_class, gradio.blocks.Block):
+                    if component_class and issubclass(
+                        component_class, gradio.blocks.Block
+                    ):
                         if node.args:
                             return False
                         for kw in node.keywords:
@@ -634,6 +641,7 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
         elif isinstance(node.func, ast.Name):
             try:
                 import gradio
+
                 component_class = getattr(gradio, node.func.id, None)
                 if component_class and issubclass(component_class, gradio.blocks.Block):
                     if node.args:
