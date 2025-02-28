@@ -622,21 +622,33 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
             node.func.value, ast.Name
         ):
             if node.func.value.id in {"gr", "gradio"}:
-                if node.args:
-                    return False
-
-                for kw in node.keywords:
-                    if kw.arg == "value":
-                        return False
-                return True
-        elif isinstance(node.func, ast.Name):
-            if node.args:
+                try:
+                    import gradio
+                    component_class = getattr(gradio, node.func.attr, None)
+                    if component_class and issubclass(component_class, gradio.blocks.Block):
+                        if node.args:
+                            return False
+                        for kw in node.keywords:
+                            if kw.arg == "value":
+                                return False
+                        return True
+                except (ImportError, AttributeError):
+                    pass
                 return False
-
-            for kw in node.keywords:
-                if kw.arg == "value":
-                    return False
-            return True
+        elif isinstance(node.func, ast.Name):
+            try:
+                import gradio
+                component_class = getattr(gradio, node.func.id, None)
+                if component_class and issubclass(component_class, gradio.blocks.Block):
+                    if node.args:
+                        return False
+                    for kw in node.keywords:
+                        if kw.arg == "value":
+                            return False
+                    return True
+            except (ImportError, AttributeError):
+                pass
+            return False
 
     elif isinstance(node, (ast.Tuple, ast.List)):
         if not node.elts:
