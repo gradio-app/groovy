@@ -328,3 +328,51 @@ def test_gradio_component_with_none_values():
     return {"visible": true, "info": null, "__type__": "update"};
 }"""
     assert transpile(component_with_none).strip() == expected.strip()
+
+
+def test_gradio_update_function():
+    def update_component():
+        return gradio.update(visible=False, interactive=True)
+
+    expected = """function update_component() {
+    return {"visible": false, "interactive": true, "__type__": "update"};
+}"""
+    assert transpile(update_component).strip() == expected.strip()
+
+
+def test_update_with_none_values():
+    def update_with_none():
+        return gradio.update(info=None, label="Updated")
+
+    expected = """function update_with_none() {
+    return {"info": null, "label": "Updated", "__type__": "update"};
+}"""
+    assert transpile(update_with_none).strip() == expected.strip()
+
+
+def test_mixed_update_and_components():
+    def mixed_updates():
+        return gradio.update(visible=True), gradio.Textbox(placeholder="Test")
+
+    expected = """function mixed_updates() {
+    return [{"visible": true, "__type__": "update"}, {"placeholder": "Test", "__type__": "update"}];
+}"""
+    assert transpile(mixed_updates).strip() == expected.strip()
+
+
+def test_conditional_update():
+    def conditional_update(x: int):
+        if x > 10:
+            return gradio.update(visible=True)
+        else:
+            return gradio.update(visible=False)
+
+    expected = """function conditional_update(x) {
+    if ((x > 10)) {
+        return {"visible": true, "__type__": "update"};
+    }
+    else {
+        return {"visible": false, "__type__": "update"};
+    }
+}"""
+    assert transpile(conditional_update).strip() == expected.strip()

@@ -319,6 +319,10 @@ class PythonToJSVisitor(ast.NodeVisitor):
             # Try to resolve if this is a Gradio component.
             if has_gradio:
                 try:
+                    # Handle direct update() call
+                    if node.func.id == "update":
+                        return self._handle_gradio_component_updates(node)
+
                     component_class = getattr(gradio, node.func.id, None)
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
@@ -342,6 +346,10 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     "gradio",
                     "gr",
                 }:
+                    # Handle gr.update() call
+                    if node.func.attr == "update":
+                        return self._handle_gradio_component_updates(node)
+
                     component_class = getattr(gradio, node.func.attr, None)
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
@@ -626,6 +634,9 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
                 try:
                     import gradio
 
+                    if node.func.attr == "update":
+                        return True
+
                     component_class = getattr(gradio, node.func.attr, None)
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
@@ -642,6 +653,9 @@ def _is_valid_gradio_return(node: ast.AST) -> bool:
         elif isinstance(node.func, ast.Name):
             try:
                 import gradio
+
+                if node.func.id == "update":
+                    return True
 
                 component_class = getattr(gradio, node.func.id, None)
                 if component_class and issubclass(component_class, gradio.blocks.Block):
@@ -669,7 +683,7 @@ if __name__ == "__main__":
     import gradio as gr
 
     def filter_rows_by_term():
-        return gr.Tabs(selected=2, visible=True, info=None)
+        return gr.update(selected=2, visible=True, info=None)
 
-    js_code = transpile(filter_rows_by_term)
+    js_code = transpile(filter_rows_by_term, validate=True)
     print(js_code)
