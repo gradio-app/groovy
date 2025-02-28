@@ -286,7 +286,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
             return f"{arg_code}.length"
 
     # === Function Calls ===
-    def _handle_gradio_component(self, component_class, node):
+    def _handle_gradio_component_updates(self, component_class, node):
         """Handle Gradio component calls and return JSON representation."""
         kwargs = {}
         for kw in node.keywords:
@@ -318,7 +318,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
                     ):
-                        return self._handle_gradio_component(component_class, node)
+                        return self._handle_gradio_component_updates(component_class, node)
                 except Exception:
                     pass
 
@@ -341,7 +341,7 @@ class PythonToJSVisitor(ast.NodeVisitor):
                     if component_class and issubclass(
                         component_class, gradio.blocks.Block
                     ):
-                        return self._handle_gradio_component(component_class, node)
+                        return self._handle_gradio_component_updates(component_class, node)
             except Exception:
                 pass
 
