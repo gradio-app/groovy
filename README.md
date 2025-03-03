@@ -33,7 +33,7 @@ def sum_range(n: int):
         total = total + i
     return total
 
-js_code = transpile(sum)
+js_code = transpile(sum_range)
 print(js_code)
 ```
 produces:
