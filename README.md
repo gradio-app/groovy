@@ -7,7 +7,7 @@
 
 
 <p align="center">
-<img src="https://github.com/user-attachments/assets/49d40a48-3c73-4911-8033-250cfa7aafd4" width=400>
+<img src="https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/gradio-guides/groovy.png" width=500>
 </p>
 
 Groovy is a Python-to-JavaScript transpiler, meaning that it converts Python functions to their JavaScript equivalents. It is used in the [Gradio](https://gradio.app) library, so that developers can write functions in Python and have them run as fast as client-side JavaScript ⚡. Instead of aiming for full coverage of Python features, groovy prioritizes **clear error reporting** for unsupported Python code, making it easier for developers to modify their functions accordingly.
